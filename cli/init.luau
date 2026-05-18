@@ -47,7 +47,7 @@ local function process_paths()
 						local stem_name = string.sub(base_name, 1, #base_name - #ext_name)
 
 						local require_path = (base_name == "init.luau" or base_name == "init.lua") and dir_name
-							or Path.join(dir_name, stem_name)
+							or `{dir_name}/{stem_name}`
 
 						file_paths[require_path] = instance_path
 					end
@@ -58,7 +58,7 @@ local function process_paths()
 		end
 	end
 
-	return instance_paths
+	return file_paths
 end
 
 local function process(src: string, out: string)

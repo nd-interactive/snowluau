@@ -6,8 +6,7 @@ local Utils = require("@std/syntax/utils")
 
 local Transformer = {}
 
-
-function Transformer.transform(source: string, aliases: { [string]: string }, file_paths: { [string]: string})
+function Transformer.transform(source: string, aliases: { [string]: string }, file_paths: { [string]: string })
 	local parse_result = Parser.parse(source)
 	local replacements = Query.findAllFromRoot(parse_result, Utils.isRequireCall):replace(function(astRequireCall)
 		local arguments = astRequireCall.arguments
@@ -27,6 +26,12 @@ function Transformer.transform(source: string, aliases: { [string]: string }, fi
 
 			local file_path = table.concat(paths, "/")
 			local instance_path = file_paths[file_path]
+
+
+			for i, v in file_paths do
+				print(typeof(i))
+				print("A", i, v, file_path, file_path ==i)
+			end
 
 			if not instance_path then
 				return
