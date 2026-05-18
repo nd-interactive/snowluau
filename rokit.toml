@@ -5,3 +5,4 @@
 
 [tools]
 lute = "luau-lang/lute@1.0.0"
+pesde = "pesde-pkg/pesde@0.7.3+registry.0.2.3"

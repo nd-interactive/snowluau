@@ -1,0 +1,14 @@
+name = "nd_interactive/snowluau"
+version = "0.1.0"
+description = "luau transformer"
+authors = ["sbi-n"]
+license = "MIT"
+
+[target]
+environment = "luau"
+
+[indices]
+default = "https://github.com/pesde-pkg/index"
+
+[dev_dependencies]
+cli_builder = { name = "4x8matrix/cli_builder", version = "^0.1.0-dev.1" }

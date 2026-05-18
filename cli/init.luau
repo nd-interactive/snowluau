@@ -1,11 +1,18 @@
 local Fs = require("@std/fs")
 local Json = require("@std/json")
 local Path = require("@std/path")
+local Task = require("@std/task")
+
+local CLIBuilder = require("./luau_packages/cli_builder")
 
 local Transformer = require("./src/transformer")
 
 local LUAURC_PATH = ".luaurc"
 local SOURCEMAP_PATH = "sourcemap.json"
+
+local NAME = "snowluau"
+local VERSION = "0.1.0"
+local ENVELOPE = `{NAME} {VERSION}`
 
 local function process_aliases()
 	local luaurc = Json.deserialize(Fs.readFileToString(LUAURC_PATH))
@@ -86,9 +93,75 @@ local function process(src: string, out: string)
 				out_paths[child_path] = child_out_path
 			end
 		elseif src_type == "file" then
-			Fs.writeStringToFile(out_path, Transformer.transform(Fs.readFileToString(src_path), aliases, paths))
+			xpcall(function()
+				Fs.writeStringToFile(out_path, Transformer.transform(Fs.readFileToString(src_path), aliases, paths))
+			end, function()
+				warn(`failed to transform "{src_path}"`)
+			end)
 		end
 	end
 end
 
-process("src", "out")
+CLIBuilder.cli
+	.new()
+	:setName(NAME)
+	:setVersion(VERSION)
+	:setDescription("Luau transformer/bundler")
+	:setGitRepository("https://github.com/nd-interactive/snowluau")
+	:addCommand(CLIBuilder.command
+		.new()
+		:setName("transform")
+		:setDescription("Transfrom string-based require to roblox instance-based require")
+		:addOption(
+			CLIBuilder.option
+				.new()
+				:setName("watch")
+				:addAlias("w")
+				:setDescription("Watch changes")
+				:setType("boolean")
+				:setDefaultValue(false)
+				:build()
+		)
+		:addArgument(
+			CLIBuilder.argument
+				.new()
+				:setName("input")
+				:setDescription("Path to input")
+				:setType("string")
+				:setRequired(true)
+				:build()
+		)
+		:addArgument(
+			CLIBuilder.argument
+				.new()
+				:setName("output")
+				:setDescription("Path to output")
+				:setType("string")
+				:setRequired(true)
+				:build()
+		)
+		:setCallback(function(options)
+			local commandArguments = options.commandArguments
+			local optionArguments = options.commandOptions
+
+			local input = commandArguments.input
+			local output = commandArguments.output
+
+			process(input, output)
+			if optionArguments.watch then
+				local watcher = Fs.watch(input)
+
+				while true do
+					local event
+
+					repeat
+						event = watcher:next()
+						Task.wait(0.1)
+					until event
+
+					process(input, output)
+				end
+			end
+		end)
+		:build())
+	:run({ select(2, ...) })
