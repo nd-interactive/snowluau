@@ -12,7 +12,6 @@ local SOURCEMAP_PATH = "sourcemap.json"
 
 local NAME = "snowluau"
 local VERSION = "0.1.0"
-local ENVELOPE = `{NAME} {VERSION}`
 
 local function process_aliases()
 	local luaurc = Json.deserialize(Fs.readFileToString(LUAURC_PATH))
@@ -102,6 +101,35 @@ local function process(src: string, out: string)
 	end
 end
 
+local function process_clear(src: string, out: string)
+	local out_paths: { Path.Path } = { out }
+	local src_paths: { [Path.Path]: Path.Path } = { [out] = src }
+
+	while next(out_paths) do
+		local out_path = table.remove(out_paths)
+		local out_type = Fs.type(out_path)
+		local src_path = src_paths[out_path]
+
+		if not Fs.exists(src_path) then
+			if out_type == "dir" then
+				Fs.removeDirectory(out_path, { recursive = true })
+			else
+				Fs.remove(out_path)
+			end
+		else
+			if out_type == "dir" then
+				for _, child in Fs.listDirectory(out_path) do
+					local child_path = Path.join(out_path, child.name)
+					local child_src_path = Path.join(src_path, child.name)
+
+					table.insert(out_paths, child_path)
+					src_paths[child_path] = child_src_path
+				end
+			end
+		end
+	end
+end
+
 CLIBuilder.cli
 	.new()
 	:setName(NAME)
@@ -147,20 +175,16 @@ CLIBuilder.cli
 			local input = commandArguments.input
 			local output = commandArguments.output
 
+			process_clear(input, output)
 			process(input, output)
 			if optionArguments.watch then
-				local watcher = Fs.watch(input)
+				local walker = Fs.walk(input, { recursive = true })
+				local descendant
 
-				while true do
-					local event
+				repeat
+					descendant = walker()
 
-					repeat
-						event = watcher:next()
-						Task.wait(0.1)
-					until event
-
-					process(input, output)
-				end
+				until not descendant
 			end
 		end)
 		:build())
