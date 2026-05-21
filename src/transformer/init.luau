@@ -1,3 +1,4 @@
+local Luau = require("@std/luau")
 local Syntax = require("@std/syntax")
 local Query = require("@std/syntax/query")
 local Parser = require("@std/syntax/parser")
@@ -8,6 +9,7 @@ local Transformer = {}
 
 function Transformer.transform(source: string, aliases: { [string]: string }, file_paths: { [string]: string })
 	local parse_result = Parser.parse(source)
+
 	local replacements = Query.findAllFromRoot(parse_result, Utils.isRequireCall):replace(function(astRequireCall)
 		local arguments = astRequireCall.arguments
 

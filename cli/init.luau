@@ -74,6 +74,8 @@ local function process(src: string, out: string)
 	local src_paths: { Path.Path } = { src }
 	local out_paths: { [Path.Path]: Path.Path } = { [src] = out }
 
+	local start = os.clock()
+
 	while next(src_paths) do
 		local src_path = table.remove(src_paths)
 		local src_type = Fs.type(src_path)
@@ -92,13 +94,22 @@ local function process(src: string, out: string)
 				out_paths[child_path] = child_out_path
 			end
 		elseif src_type == "file" then
+			local src_ext = Path.extname(src_path)
+			local src_content = Fs.readFileToString(src_path)
+
 			xpcall(function()
-				Fs.writeStringToFile(out_path, Transformer.transform(Fs.readFileToString(src_path), aliases, paths))
+				if src_ext == ".luau" or src_ext == ".lua" then
+					Fs.writeStringToFile(out_path, Transformer.transform(src_content, aliases, paths))
+				else
+					Fs.writeStringToFile(out_path, src_content)
+				end
 			end, function()
-				warn(`failed to transform "{src_path}"`)
+				print(`failed to transform "{src_path}"`)
 			end)
 		end
 	end
+
+	print("processing took " .. tostring(os.clock() - start) .. "s")
 end
 
 local function process_clear(src: string, out: string)
@@ -177,14 +188,8 @@ CLIBuilder.cli
 
 			process_clear(input, output)
 			process(input, output)
+
 			if optionArguments.watch then
-				local walker = Fs.walk(input, { recursive = true })
-				local descendant
-
-				repeat
-					descendant = walker()
-
-				until not descendant
 			end
 		end)
 		:build())
