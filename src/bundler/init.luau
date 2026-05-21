@@ -2,8 +2,10 @@ local Luau = require("@std/luau")
 
 local Bundler = {}
 
-for i, v in Luau.requires("cli/init.luau")[1] do
-    print(i, v)
+local MODULES_NAME = "__SNOWLUAU_MODULES"
+local CACHE_FUNCTION_NAME = "__SNOWLUAU_CACHE_FUNCTION"
+
+function Bundler.bundle(entry: string)
 end
 
 return Bundler
