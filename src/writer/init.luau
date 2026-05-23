@@ -11,7 +11,7 @@ export type Writer = typeof(setmetatable(
 	Writer
 ))
 
-function Writer.new()
+function Writer.new(): Writer
 	local self = setmetatable({
 		content = "",
 		indentation = 0,
@@ -48,7 +48,7 @@ function Writer.append_lines(self: Writer, lines: { string })
 	end
 end
 
-function Writer.finalize(self: Writer)
+function Writer.finalize(self: Writer): string
 	return self.content
 end
 
