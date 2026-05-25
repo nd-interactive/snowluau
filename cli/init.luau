@@ -6,6 +6,7 @@ local Task = require("@std/task")
 local CLIBuilder = require("./luau_packages/cli_builder")
 
 local Transformer = require("./src/transformer")
+local Bundler = require("./src/bundler")
 
 local LUAURC_PATH = ".luaurc"
 local SOURCEMAP_PATH = "sourcemap.json"
@@ -191,6 +192,48 @@ CLIBuilder.cli
 
 			if optionArguments.watch then
 			end
+		end)
+		:build())
+	:addCommand(CLIBuilder.command
+		.new()
+		:setName("bundle")
+		:setDescription("bundle a bunch of scripts into single script")
+		:addOption(
+			CLIBuilder.option
+				.new()
+				:setName("watch")
+				:addAlias("w")
+				:setDescription("Watch changes")
+				:setType("boolean")
+				:setDefaultValue(false)
+				:build()
+		)
+		:addArgument(
+			CLIBuilder.argument
+				.new()
+				:setName("input")
+				:setDescription("Path to input")
+				:setType("string")
+				:setRequired(true)
+				:build()
+		)
+		:addArgument(
+			CLIBuilder.argument
+				.new()
+				:setName("output")
+				:setDescription("Path to output")
+				:setType("string")
+				:setRequired(true)
+				:build()
+		)
+		:setCallback(function(options)
+			local commandArguments = options.commandArguments
+			--local optionArguments = options.commandOptions
+
+			local input = commandArguments.input
+			local output = commandArguments.output
+
+			Fs.writeStringToFile(output, Bundler.bundle(input))
 		end)
 		:build())
 	:run({ select(2, ...) })

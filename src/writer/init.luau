@@ -43,7 +43,7 @@ function Writer.append_line(self: Writer, str: string)
 end
 
 function Writer.append_lines(self: Writer, lines: { string })
-	for _, line in lines do
+	for num, line in lines do
 		self:append_line(line)
 	end
 end

@@ -1,5 +1,3 @@
-local Luau = require("@std/luau")
-local Syntax = require("@std/syntax")
 local Query = require("@std/syntax/query")
 local Parser = require("@std/syntax/parser")
 local Printer = require("@std/syntax/printer")
