@@ -89,19 +89,29 @@ function Bundler.bundle(entry: string)
 							local token = node.token
 							local text = token.text
 
-							if string.sub(text, 1, 4) ~= "@std" then
-								print(text, path)
-								local module_absolute_path = Luau.resolveModule(text, path)
-								local module_cwd_relative_path = Path.relative(Process.cwd(), module_absolute_path)
-
-								if not modules[module_cwd_relative_path] then
-									table.insert(paths, module_cwd_relative_path)
-								end
-
-								return `{CACHE_FUNCTION_NAME}("{module_cwd_relative_path}")`
+							if string.sub(text, 1, 4) == "@std" then
+								return
 							end
 
-							return
+							print(
+								text,
+								string.split(Path.format(Path.basename(path)), ".")[1] == "init" and Path.dirname(path)
+									or path
+							)
+
+							local module_absolute_path = Luau.resolveModule(
+								text,
+								string.split(Path.format(Path.basename(path)), ".")[1] == "init" and Path.dirname(path)
+									or path
+							)
+							local module_cwd_relative_path =
+								Path.format(Path.relative(Process.cwd(), module_absolute_path))
+
+							if not modules[module_cwd_relative_path] then
+								table.insert(paths, module_cwd_relative_path)
+							end
+
+							return `{CACHE_FUNCTION_NAME}("{module_cwd_relative_path}")`
 						end)
 
 					modules[path] = Printer.printFile(parse_result, replacements)
