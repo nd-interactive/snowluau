@@ -14,18 +14,31 @@ local SOURCEMAP_PATH = "sourcemap.json"
 local NAME = "snowluau"
 local VERSION = "0.1.0"
 
+export type Aliases = { [string]: string }
+
+export type Luaurc = {
+	aliases: Aliases
+}
+
+export type Sourcemap = {
+	name: string,
+	className: string,
+	filePaths: { string }?,
+	children: { Sourcemap }?
+}
+
 local function process_aliases()
-	local luaurc = Json.deserialize(Fs.readFileToString(LUAURC_PATH))
+	local luaurc = Json.deserialize(Fs.readFileToString(LUAURC_PATH)) :: Luaurc
 
 	return luaurc.aliases
 end
 
 local function process_paths()
-	local sourcemap = Json.deserialize(Fs.readFileToString(SOURCEMAP_PATH))
+	local sourcemap = Json.deserialize(Fs.readFileToString(SOURCEMAP_PATH)) :: Sourcemap
 
 	local instance_paths = {}
 
-	local nodes = table.clone(sourcemap.children)
+	local nodes = table.clone(assert(sourcemap.children, "Datamodel includes no children"))
 	local file_paths = {}
 
 	for _, service in nodes do
@@ -33,7 +46,7 @@ local function process_paths()
 	end
 
 	while next(nodes) do
-		local node = table.remove(nodes)
+		local node = table.remove(nodes) :: Sourcemap
 
 		local children = node.children
 
@@ -48,10 +61,10 @@ local function process_paths()
 
 				if paths then
 					for _, path in paths do
-						local base_name = Path.basename(path)
-						local dir_name = Path.dirname(path)
-						local ext_name = Path.extname(path)
-						local stem_name = string.sub(base_name, 1, #base_name - #ext_name)
+						local base_name = assert(Path.basename(path))
+						local dir_name = assert(Path.dirname(path))
+						local ext_name = assert(Path.extname(path))
+						local stem_name = string.sub(base_name, 1, string.len(base_name) - string.len(ext_name))
 
 						local require_path = (base_name == "init.luau" or base_name == "init.lua") and dir_name
 							or `{dir_name}/{stem_name}`

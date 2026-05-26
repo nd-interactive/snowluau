@@ -27,12 +27,13 @@ local function read_module(path)
 	elseif path_type == "file" then
 		return path
 	end
-
-	return
 end
 
 function Bundler.bundle(entry: string)
 	local writer = Writer.new()
+
+	writer:append_line("--!nocheck")
+	writer:append("\n")
 
 	writer:append_line(`local {MODULES_NAME} = \{}`)
 	writer:append_line(`local {CACHES_NAME} = \{}`)
@@ -92,12 +93,6 @@ function Bundler.bundle(entry: string)
 							if string.sub(text, 1, 4) == "@std" then
 								return
 							end
-
-							print(
-								text,
-								string.split(Path.format(Path.basename(path)), ".")[1] == "init" and Path.dirname(path)
-									or path
-							)
 
 							local module_absolute_path = Luau.resolveModule(
 								text,
