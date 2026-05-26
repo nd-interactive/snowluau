@@ -60,7 +60,6 @@ function Bundler.bundle(entry: string)
 	writer:append_line("end")
 	writer:append("\n")
 
-	local entry_absolute = Path.resolve(entry)
 	local entry_cwd_relative = read_module(entry)
 
 	local modules = {}
@@ -71,48 +70,49 @@ function Bundler.bundle(entry: string)
 		local path_context = Fs.readFileToString(path)
 
 		for _, child in Luau.requires(path) do
-			if child.resolvedPath then
-				local child_name = Path.format(Path.relative(entry_absolute, child.resolvedPath))
+			if not child.resolvedPath then
+				continue
+			end
 
-				if not modules[child_name] then
-					local parse_result = Parser.parse(path_context)
+			local chil_relative_path = Path.format(Path.relative(Process.cwd(), child.resolvedPath))
 
-					local replacements = Query.findAllFromRoot(parse_result, Utils.isRequireCall)
-						:replace(function(astRequireCall)
-							local arguments = astRequireCall.arguments
+			if modules[chil_relative_path] or table.find(paths, chil_relative_path) then
+				continue
+			end
 
-							if #arguments > 1 then
-								return
-							end
-
-							local expression = arguments[1]
-							local node = expression.node
-							local token = node.token
-							local text = token.text
-
-							if string.sub(text, 1, 4) == "@std" then
-								return
-							end
-
-							local module_absolute_path = Luau.resolveModule(
-								text,
-								string.split(Path.format(Path.basename(path)), ".")[1] == "init" and Path.dirname(path)
-									or path
-							)
-							local module_cwd_relative_path =
-								Path.format(Path.relative(Process.cwd(), module_absolute_path))
-
-							if not modules[module_cwd_relative_path] then
-								table.insert(paths, module_cwd_relative_path)
-							end
-
-							return `{CACHE_FUNCTION_NAME}("{module_cwd_relative_path}")`
-						end)
-
-					modules[path] = Printer.printFile(parse_result, replacements)
-				end
+			if not modules[chil_relative_path] then
+				table.insert(paths, chil_relative_path)
 			end
 		end
+
+		local parse_result = Parser.parse(path_context)
+
+		local replacements = Query.findAllFromRoot(parse_result, Utils.isRequireCall):replace(function(astRequireCall)
+			local arguments = astRequireCall.arguments
+
+			if #arguments > 1 then
+				return
+			end
+
+			local expression = arguments[1]
+			local node = expression.node
+			local token = node.token
+			local text = token.text
+
+			if string.sub(text, 1, 4) == "@std" then
+				return
+			end
+
+			local module_absolute_path = Luau.resolveModule(
+				text,
+				string.split(Path.format(Path.basename(path)), ".")[1] == "init" and Path.dirname(path) or path
+			)
+			local module_cwd_relative_path = Path.format(Path.relative(Process.cwd(), module_absolute_path))
+
+			return `{CACHE_FUNCTION_NAME}("{module_cwd_relative_path}")`
+		end)
+
+		modules[path] = Printer.printFile(parse_result, replacements)
 	end
 
 	for module_name, module in modules do
@@ -126,7 +126,8 @@ function Bundler.bundle(entry: string)
 		writer:append_line("end")
 	end
 
-	writer:append(`{CACHE_FUNCTION_NAME}("{entry_cwd_relative}")`)
+	writer:append("\n")
+	writer:append_line(`return {CACHE_FUNCTION_NAME}("{entry_cwd_relative}")`)
 
 	return writer:finalize()
 end
