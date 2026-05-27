@@ -26,7 +26,7 @@ local function build_executable()
 		archive_result = Process.run({
 			"tar",
 			"-czvf",
-			`{RELEASE_DIR}/blink.tar.gz`,
+			`{RELEASE_DIR}/snowluau.tar.gz`,
 			"-C",
 			RELEASE_DIR,
 			exe_name,
@@ -35,7 +35,7 @@ local function build_executable()
 		archive_result = Process.run({
 			"tar",
 			"-cJvf",
-			`{RELEASE_DIR}/blink.tar.xz`,
+			`{RELEASE_DIR}/snowluau.tar.xz`,
 			"-C",
 			RELEASE_DIR,
 			exe_name,
@@ -45,7 +45,7 @@ local function build_executable()
 	assert(archive_result.ok, archive_result.stderr)
 
 	Fs.remove(exe_path)
-	print(`Built executable to {RELEASE_DIR}/blink.tar.*`)
+	print(`Built executable to {RELEASE_DIR}/snowluau.tar.*`)
 end
 
 do
