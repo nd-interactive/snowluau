@@ -1,0 +1,74 @@
+name: Release
+
+on:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: write
+
+env:
+  GH_TOKEN: ${{github.token}}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: blink-linux-x86_64
+          - os: macos-latest
+            artifact_name: blink-macos-aarch64
+          - os: windows-latest
+            artifact_name: blink-windows-x86_64
+            
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install GitHub CLI
+        shell: bash
+        if: ${{ env.ACT && runner.os == 'Linux' }}
+        run: |
+          (type -p wget >/dev/null || (sudo apt update && sudo apt-get install wget -y)) \
+            && sudo mkdir -p -m 755 /etc/apt/keyrings \
+            && out=$(mktemp) && wget -nv -O$out https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+            && cat $out | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+            && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+            && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+            && sudo apt update \
+            && sudo apt install gh -y
+      
+      - name: Setup rokit
+        uses: CompeyDev/setup-rokit@v0.1.0
+
+      - name: Setup pesde
+        uses: axiom-co/setup-pesde@v0.4.1
+        with:
+          token: ${{ secrets.PESDE_TOKEN }}
+
+      - name: Install dependencies
+        run: pesde install
+
+      - name: Build binaries
+        run: lute run build
+
+      - name: Rename asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          name="./release/blink"
+          matches=(${name}*)
+          src="${matches[0]}"
+          ext="${src#${name}}"
+          mv "$src" "./release/${{ matrix.artifact_name }}.${ext#*.}"
+          
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: ./release/${{ matrix.artifact_name }}.*
