@@ -90,11 +90,12 @@ function Bundler.bundle(entry: string)
 		local replacements = Query.findAllFromRoot(parse_result, Utils.isRequireCall):replace(function(astRequireCall)
 			local arguments = astRequireCall.arguments
 
-			if #arguments > 1 then
+			if #arguments ~= 1 then
 				return
 			end
 
 			local expression = arguments[1]
+
 			local node = expression.node
 			local token = node.token
 			local text = token.text
