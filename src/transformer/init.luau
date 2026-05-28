@@ -16,12 +16,12 @@ function Transformer.transform(source: string, aliases: { [string]: string }, fi
 		end
 
 		local expression = arguments[1]
+		local node = expression.node
 
-		if expression.tag ~= "string" then
+		if node.tag ~= "string" then
 			return
 		end
 
-		local node = expression.node
 		local token = node.token
 		local text = token.text
 
