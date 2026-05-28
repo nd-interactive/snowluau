@@ -12,7 +12,7 @@ local LUAURC_PATH = ".luaurc"
 local SOURCEMAP_PATH = "sourcemap.json"
 
 local NAME = "snowluau"
-local VERSION = "0.1.1"
+local VERSION = "0.1.0"
 
 export type Aliases = { [string]: string }
 
