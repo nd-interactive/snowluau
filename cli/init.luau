@@ -17,14 +17,14 @@ local VERSION = "0.1.0"
 export type Aliases = { [string]: string }
 
 export type Luaurc = {
-	aliases: Aliases
+	aliases: Aliases,
 }
 
 export type Sourcemap = {
 	name: string,
 	className: string,
 	filePaths: { string }?,
-	children: { Sourcemap }?
+	children: { Sourcemap }?,
 }
 
 local function process_aliases()
@@ -111,15 +111,17 @@ local function process(src: string, out: string)
 			local src_ext = Path.extname(src_path)
 			local src_content = Fs.readFileToString(src_path)
 
-			xpcall(function()
+			local success, message = xpcall(function()
 				if src_ext == ".luau" or src_ext == ".lua" then
 					Fs.writeStringToFile(out_path, Transformer.transform(src_content, aliases, paths))
 				else
 					Fs.writeStringToFile(out_path, src_content)
 				end
-			end, function()
-				print(`failed to transform "{src_path}"`)
-			end)
+			end, debug.traceback)
+
+			if not success then
+				print(`failed to transform "{src_path}"\n\n{message}`)
+			end
 		end
 	end
 
