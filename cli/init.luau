@@ -130,6 +130,10 @@ local function process_clear(src: string, out: string)
 	local out_paths: { Path.Path } = { out }
 	local src_paths: { [Path.Path]: Path.Path } = { [out] = src }
 
+	if not Fs.exists(out) then
+		return
+	end
+
 	while next(out_paths) do
 		local out_path = table.remove(out_paths)
 		local out_type = Fs.type(out_path)
