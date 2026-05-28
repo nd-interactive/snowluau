@@ -1,5 +1,5 @@
 name = "nd_interactive/snowluau"
-version = "0.1.0"
+version = "0.1.1"
 description = "luau transformer"
 authors = ["sbi-n"]
 license = "MIT"
