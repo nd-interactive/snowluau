@@ -25,7 +25,7 @@ function Transformer.transform(source: string, aliases: { [string]: string }, fi
 		local token = node.token
 		local text = token.text
 
-		if text:sub(1, 1) == "@" then
+		if text:sub(1, 1) == "@" and text:sub(1, 5) ~= "@self" then
 			local paths = string.split(text, "/")
 			paths[1] = aliases[paths[1]:sub(2)]
 
