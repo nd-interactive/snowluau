@@ -8,17 +8,10 @@ local CLIBuilder = require("./luau_packages/cli_builder")
 local Transformer = require("./src/transformer")
 local Bundler = require("./src/bundler")
 
-local LUAURC_PATH = ".luaurc"
 local SOURCEMAP_PATH = "sourcemap.json"
 
 local NAME = "snowluau"
 local VERSION = "0.1.0"
-
-export type Aliases = { [string]: string }
-
-export type Luaurc = {
-	aliases: Aliases,
-}
 
 export type Sourcemap = {
 	name: string,
@@ -26,12 +19,6 @@ export type Sourcemap = {
 	filePaths: { string }?,
 	children: { Sourcemap }?,
 }
-
-local function process_aliases()
-	local luaurc = Json.deserialize(Fs.readFileToString(LUAURC_PATH)) :: Luaurc
-
-	return luaurc.aliases
-end
 
 local function process_paths()
 	local sourcemap = Json.deserialize(Fs.readFileToString(SOURCEMAP_PATH)) :: Sourcemap
@@ -82,7 +69,6 @@ local function process_paths()
 end
 
 local function process(src: string, out: string)
-	local aliases = process_aliases()
 	local paths = process_paths()
 
 	local src_paths: { Path.Path } = { src }
@@ -109,12 +95,13 @@ local function process(src: string, out: string)
 			end
 		elseif src_type == "file" then
 			local src_ext = Path.extname(src_path)
-			local src_content = Fs.readFileToString(src_path)
 
 			local success, message = xpcall(function()
 				if src_ext == ".luau" or src_ext == ".lua" then
-					Fs.writeStringToFile(out_path, Transformer.transform(src_content, aliases, paths))
+					Fs.writeStringToFile(out_path, Transformer.transform(src_path, paths))
 				else
+					local src_content = Fs.readFileToString(src_path)
+
 					Fs.writeStringToFile(out_path, src_content)
 				end
 			end, debug.traceback)
@@ -169,7 +156,7 @@ CLIBuilder.cli
 	:setGitRepository("https://github.com/nd-interactive/snowluau")
 	:addCommand(CLIBuilder.command
 		.new()
-		:setName("transform")
+		:setName("resolve")
 		:setDescription("Transfrom string-based require to roblox instance-based require")
 		:addOption(
 			CLIBuilder.option

@@ -2,10 +2,15 @@ local Query = require("@std/syntax/query")
 local Parser = require("@std/syntax/parser")
 local Printer = require("@std/syntax/printer")
 local Utils = require("@std/syntax/utils")
+local Luau = require("@std/luau")
+local Path = require("@std/path")
+local Fs = require("@std/fs")
+local Process = require("@std/process")
 
 local Transformer = {}
 
-function Transformer.transform(source: string, aliases: { [string]: string }, file_paths: { [string]: string })
+function Transformer.transform(input, instance_paths: { [string]: string })
+	local source = Fs.readFileToString(input)
 	local parse_result = Parser.parse(source)
 
 	local replacements = Query.findAllFromRoot(parse_result, Utils.isRequireCall):replace(function(astRequireCall)
@@ -25,16 +30,20 @@ function Transformer.transform(source: string, aliases: { [string]: string }, fi
 		local token = node.token
 		local text = token.text
 
-		if text:sub(1, 1) == "@" and text:sub(1, 5) ~= "@self" then
-			local paths = string.split(text, "/")
-			paths[1] = aliases[paths[1]:sub(2)]
+		local success, resolved_path = pcall(Luau.resolveModule, text, input)
 
-			local file_path = table.concat(paths, "/")
-			local instance_path = file_paths[file_path]
+		if success then
+			local relative_resolved = assert(Path.relative(Process.cwd(), resolved_path))
+			local basename_resolved = assert(Path.basename(relative_resolved))
+			local ext_resolved = assert(Path.extname(relative_resolved))
 
-			if not instance_path then
-				return
-			end
+			local file_path = Path.format(
+				Path.join(
+					Path.dirname(relative_resolved),
+					string.sub(basename_resolved, 1, string.len(basename_resolved) - string.len(ext_resolved))
+				)
+			)
+			local instance_path = instance_paths[file_path]
 
 			return `require({instance_path})`
 		end
