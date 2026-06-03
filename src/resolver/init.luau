@@ -7,9 +7,9 @@ local Path = require("@std/path")
 local Fs = require("@std/fs")
 local Process = require("@std/process")
 
-local Transformer = {}
+local Resolver = {}
 
-function Transformer.transform(input, instance_paths: { [string]: string })
+function Resolver.resolve(input, instance_paths: { [string]: string })
 	local source = Fs.readFileToString(input)
 	local parse_result = Parser.parse(source)
 
@@ -33,19 +33,13 @@ function Transformer.transform(input, instance_paths: { [string]: string })
 		local success, resolved_path = pcall(Luau.resolveModule, text, input)
 
 		if success then
-			local relative_resolved = assert(Path.relative(Process.cwd(), resolved_path))
-			local basename_resolved = assert(Path.basename(relative_resolved))
-			local ext_resolved = assert(Path.extname(relative_resolved))
+			local relative_resolved =
+				assert(string.gsub(Path.format(Path.relative(Process.cwd(), resolved_path)), "\\", "/"))
+			local instance_path = instance_paths[relative_resolved]
 
-			local file_path = Path.format(
-				Path.join(
-					Path.dirname(relative_resolved),
-					string.sub(basename_resolved, 1, string.len(basename_resolved) - string.len(ext_resolved))
-				)
-			)
-			local instance_path = instance_paths[file_path]
-
-			return `require({instance_path})`
+			if instance_path then
+				return `require({instance_path})`
+			end
 		end
 
 		return
@@ -54,4 +48,4 @@ function Transformer.transform(input, instance_paths: { [string]: string })
 	return Printer.printFile(parse_result, replacements)
 end
 
-return Transformer
+return Resolver

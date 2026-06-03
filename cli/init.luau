@@ -5,7 +5,7 @@ local Task = require("@std/task")
 
 local CLIBuilder = require("./luau_packages/cli_builder")
 
-local Transformer = require("./src/transformer")
+local Resolver = require("./src/resolver")
 local Bundler = require("./src/bundler")
 
 local SOURCEMAP_PATH = "sourcemap.json"
@@ -48,15 +48,7 @@ local function process_paths()
 
 				if paths then
 					for _, path in paths do
-						local base_name = assert(Path.basename(path))
-						local dir_name = assert(Path.dirname(path))
-						local ext_name = assert(Path.extname(path))
-						local stem_name = string.sub(base_name, 1, string.len(base_name) - string.len(ext_name))
-
-						local require_path = (base_name == "init.luau" or base_name == "init.lua") and dir_name
-							or `{dir_name}/{stem_name}`
-
-						file_paths[require_path] = instance_path
+						file_paths[path] = instance_path
 					end
 				end
 
@@ -98,7 +90,7 @@ local function process(src: string, out: string)
 
 			local success, message = xpcall(function()
 				if src_ext == ".luau" or src_ext == ".lua" then
-					Fs.writeStringToFile(out_path, Transformer.transform(src_path, paths))
+					Fs.writeStringToFile(out_path, Resolver.resolve(src_path, paths))
 				else
 					local src_content = Fs.readFileToString(src_path)
 
@@ -107,7 +99,7 @@ local function process(src: string, out: string)
 			end, debug.traceback)
 
 			if not success then
-				print(`failed to transform "{src_path}"\n\n{message}`)
+				print(`failed to resolve "{src_path}"\n\n{message}`)
 			end
 		end
 	end
