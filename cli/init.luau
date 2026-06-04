@@ -73,12 +73,12 @@ local function process(src: string, out: string)
 		local path_type = Fs.type(path)
 		local path_ext = Path.extname(path)
 
-		if path_type == "dir" then
-			Fs.createDirectory(path, {
-				makeParents = true,
-			})
-		elseif path_type == "file" then
-			local success, message = xpcall(function(...)
+		local success, message = xpcall(function(...)
+			if path_type == "dir" then
+				Fs.createDirectory(path, {
+					makeParents = true,
+				})
+			elseif path_type == "file" then
 				local destination = Path.join(out, Path.relative(src, path))
 
 				if path_ext == ".lua" or path_ext == ".luau" then
@@ -86,11 +86,11 @@ local function process(src: string, out: string)
 				else
 					Fs.copy(src, destination)
 				end
-			end, debug.traceback)
-
-			if not success then
-				print(`failed to resolve "{path}"\n\n{message}`)
 			end
+		end, debug.traceback)
+
+		if not success then
+			print(`failed to resolve "{path}"\n\n{message}`)
 		end
 
 		path = walker()
