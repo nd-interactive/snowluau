@@ -64,7 +64,7 @@ local function process(src: string, out: string)
 	local instance_paths = process_paths()
 	local start = os.clock()
 
-	local walker = Fs.walk(out, {
+	local walker = Fs.walk(src, {
 		recursive = true,
 	})
 
