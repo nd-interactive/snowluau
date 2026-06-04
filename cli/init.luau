@@ -108,35 +108,25 @@ local function process(src: string, out: string)
 end
 
 local function process_clear(src: string, out: string)
-	local out_paths: { Path.Path } = { out }
-	local src_paths: { [Path.Path]: Path.Path } = { [out] = src }
+	local walker = Fs.walk(out, {
+		recursive = true,
+	})
 
-	if not Fs.exists(out) then
-		return
-	end
+	local path = walker()
+	while path do
+		if Fs.exists(path) and not Fs.exists(Path.join(src, Path.relative(out, path))) then
+			local path_type = Fs.type(path)
 
-	while next(out_paths) do
-		local out_path = table.remove(out_paths)
-		local out_type = Fs.type(out_path)
-		local src_path = src_paths[out_path]
-
-		if not Fs.exists(src_path) then
-			if out_type == "dir" then
-				Fs.removeDirectory(out_path, { recursive = true })
-			else
-				Fs.remove(out_path)
-			end
-		else
-			if out_type == "dir" then
-				for _, child in Fs.listDirectory(out_path) do
-					local child_path = Path.join(out_path, child.name)
-					local child_src_path = Path.join(src_path, child.name)
-
-					table.insert(out_paths, child_path)
-					src_paths[child_path] = child_src_path
-				end
+			if path_type == "dir" then
+				Fs.removeDirectory(path, {
+					recursive = true
+				})
+			elseif path_type == "file" then
+				Fs.remove(path)
 			end
 		end
+
+		path = walker()
 	end
 end
 
