@@ -61,47 +61,39 @@ local function process_paths()
 end
 
 local function process(src: string, out: string)
-	local paths = process_paths()
-
-	local src_paths: { Path.Path } = { src }
-	local out_paths: { [Path.Path]: Path.Path } = { [src] = out }
-
+	local instance_paths = process_paths()
 	local start = os.clock()
 
-	while next(src_paths) do
-		local src_path = table.remove(src_paths)
-		local src_type = Fs.type(src_path)
-		local out_path = out_paths[src_path]
+	local walker = Fs.walk(out, {
+		recursive = true,
+	})
 
-		if src_type == "dir" then
-			if not Fs.exists(out_path) then
-				Fs.createDirectory(out_path)
-			end
+	local path = walker()
+	while path do
+		local path_type = Fs.type(path)
+		local path_ext = Path.extname(path)
 
-			for _, child in Fs.listDirectory(src_path) do
-				local child_path = Path.join(src_path, child.name)
-				local child_out_path = Path.join(out_path, child.name)
+		if path_type == "dir" then
+			Fs.createDirectory(path, {
+				makeParents = true,
+			})
+		elseif path_type == "file" then
+			local success, message = xpcall(function(...)
+				local destination = Path.join(out, Path.relative(src, path))
 
-				table.insert(src_paths, child_path)
-				out_paths[child_path] = child_out_path
-			end
-		elseif src_type == "file" then
-			local src_ext = Path.extname(src_path)
-
-			local success, message = xpcall(function()
-				if src_ext == ".luau" or src_ext == ".lua" then
-					Fs.writeStringToFile(out_path, Resolver.resolve(src_path, paths))
+				if path_ext == ".lua" or path_ext == ".luau" then
+					Fs.writeStringToFile(destination, Resolver.resolve(path, instance_paths))
 				else
-					local src_content = Fs.readFileToString(src_path)
-
-					Fs.writeStringToFile(out_path, src_content)
+					Fs.copy(src, destination)
 				end
 			end, debug.traceback)
 
 			if not success then
-				print(`failed to resolve "{src_path}"\n\n{message}`)
+				print(`failed to resolve "{path}"\n\n{message}`)
 			end
 		end
+
+		path = walker()
 	end
 
 	print("processing took " .. tostring(os.clock() - start) .. "s")
@@ -119,7 +111,7 @@ local function process_clear(src: string, out: string)
 
 			if path_type == "dir" then
 				Fs.removeDirectory(path, {
-					recursive = true
+					recursive = true,
 				})
 			elseif path_type == "file" then
 				Fs.remove(path)
