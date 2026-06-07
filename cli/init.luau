@@ -81,6 +81,10 @@ local function process(src: string, out: string)
 			elseif path_type == "file" then
 				local destination = Path.join(out, Path.relative(src, path))
 
+				Fs.createDirectory(Path.dirname(destination), {
+					makeParents = true,
+				})
+
 				if path_ext == ".lua" or path_ext == ".luau" then
 					Fs.writeStringToFile(destination, Resolver.resolve(path, instance_paths))
 				else
@@ -100,6 +104,10 @@ local function process(src: string, out: string)
 end
 
 local function process_clear(src: string, out: string)
+	if not Fs.exists(out) then
+		return
+	end
+
 	local walker = Fs.walk(out, {
 		recursive = true,
 	})
