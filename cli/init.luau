@@ -1,12 +1,11 @@
 local Fs = require("@std/fs")
 local Json = require("@std/json")
 local Path = require("@std/path")
-local Task = require("@std/task")
 
-local CLIBuilder = require("./luau_packages/cli_builder")
+local CLIBuilder = require("@pkg/cli_builder")
 
-local Resolver = require("./src/resolver")
-local Bundler = require("./src/bundler")
+local Resolver = require("@src/resolver")
+local Bundler = require("@src/bundler")
 
 local SOURCEMAP_PATH = "sourcemap.json"
 

@@ -8,7 +8,7 @@ local Parser = require("@std/syntax/parser")
 local Printer = require("@std/syntax/printer")
 local Utils = require("@std/syntax/utils")
 
-local Writer = require("./writer")
+local Writer = require("@libs/writer")
 
 local Bundler = {}
 

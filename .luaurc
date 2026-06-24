@@ -3,6 +3,11 @@
     "aliases": {
         "std": "~/.lute/typedefs/1.0.0/std", 
         "lute": "~/.lute/typedefs/1.0.0/lute", 
-        "lint": "~/.lute/typedefs/1.0.0/lint"
+        "lint": "~/.lute/typedefs/1.0.0/lint",
+
+
+        "pkg": "luau_packages",
+        "src": "src",
+        "libs": "libs"
     }
 }
