@@ -6,6 +6,7 @@ local CLIBuilder = require("@pkg/cli_builder")
 
 local Resolver = require("@src/resolver")
 local Bundler = require("@src/bundler")
+local Renamer = require("@src/renamer")
 
 local SOURCEMAP_PATH = "sourcemap.json"
 
@@ -221,6 +222,38 @@ CLIBuilder.cli
 			local output = commandArguments.output
 
 			Fs.writeStringToFile(output, Bundler.bundle(input))
+		end)
+		:build())
+	:addCommand(CLIBuilder.command
+		.new()
+		:setName("renamer")
+		:setDescription("renames local variables")
+		:addArgument(
+			CLIBuilder.argument
+				.new()
+				:setName("input")
+				:setDescription("Path to input")
+				:setType("string")
+				:setRequired(true)
+				:build()
+		)
+		:addArgument(
+			CLIBuilder.argument
+				.new()
+				:setName("output")
+				:setDescription("Path to output")
+				:setType("string")
+				:setRequired(true)
+				:build()
+		)
+		:setCallback(function(options)
+			local commandArguments = options.commandArguments
+			--local optionArguments = options.commandOptions
+
+			local input = commandArguments.input
+			local output = commandArguments.output
+
+			Fs.writeStringToFile(output, Renamer.rename(Fs.readFileToString(input)))
 		end)
 		:build())
 	:run({ select(2, ...) })
