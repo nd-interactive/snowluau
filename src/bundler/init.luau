@@ -87,8 +87,8 @@ function Bundler.bundle(entry: string)
 
 		local parse_result = Parser.parse(path_context)
 
-		local replacements = Query.findAllFromRoot(parse_result, Utils.isRequireCall):replace(function(astRequireCall)
-			local arguments = astRequireCall.arguments
+		local replacements = Query.findAllFromRoot(parse_result, Utils.isRequireCall):replace(function(cstRequireCall)
+			local arguments = cstRequireCall.arguments
 
 			if #arguments ~= 1 then
 				return
@@ -97,8 +97,8 @@ function Bundler.bundle(entry: string)
 			local expression = arguments[1]
 
 			local node = expression.node
-			local token = node.token
-			local text = token.text
+			local value = node.value -- 이게 nil
+			local text = value.text
 
 			if string.sub(text, 1, 4) == "@std" then
 				return

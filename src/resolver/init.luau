@@ -13,8 +13,8 @@ function Resolver.resolve(input, instance_paths: { [string]: string })
 	local source = Fs.readFileToString(input)
 	local parse_result = Parser.parse(source)
 
-	local replacements = Query.findAllFromRoot(parse_result, Utils.isRequireCall):replace(function(astRequireCall)
-		local arguments = astRequireCall.arguments
+	local replacements = Query.findAllFromRoot(parse_result, Utils.isRequireCall):replace(function(cstRequireCall)
+		local arguments = cstRequireCall.arguments
 
 		if #arguments > 1 then
 			return
@@ -27,8 +27,8 @@ function Resolver.resolve(input, instance_paths: { [string]: string })
 			return
 		end
 
-		local token = node.token
-		local text = token.text
+		local value = node.value
+		local text = value.text
 
 		local success, resolved_path = pcall(Luau.resolveModule, text, input)
 
