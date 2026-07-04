@@ -90,14 +90,17 @@ function Bundler.bundle(entry: string)
 		local replacements = Query.findAllFromRoot(parse_result, Utils.isRequireCall):replace(function(cstRequireCall)
 			local arguments = cstRequireCall.arguments
 
-			if #arguments ~= 1 then
+			if #arguments > 1 then
 				return
 			end
 
-			local expression = arguments[1]
+			local expression = arguments[1] :: any
 
-			local node = expression.node
-			local value = node.value -- 이게 nil
+			if not Utils.isExprConstantString(expression) then
+				return
+			end
+
+			local value = expression.value
 			local text = value.text
 
 			if string.sub(text, 1, 4) == "@std" then

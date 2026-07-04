@@ -20,14 +20,13 @@ function Resolver.resolve(input, instance_paths: { [string]: string })
 			return
 		end
 
-		local expression = arguments[1]
-		local node = expression.node
+		local expression = arguments[1] :: any
 
-		if node.tag ~= "string" then
+		if not Utils.isExprConstantString(expression) then
 			return
 		end
 
-		local value = node.value
+		local value = expression.value
 		local text = value.text
 
 		local success, resolved_path = pcall(Luau.resolveModule, text, input)
