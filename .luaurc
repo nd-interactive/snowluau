@@ -6,8 +6,8 @@
         "lint": "~/.lute/typedefs/1.0.0/lint",
 
 
-        "pkg": "luau_packages",
-        "src": "src",
-        "libs": "libs"
+        "pkg": "./luau_packages",
+        "src": "./src",
+        "libs": "./libs"
     }
 }
