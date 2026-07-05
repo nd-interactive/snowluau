@@ -6,8 +6,8 @@ local TableExt = require("@std/tableext")
 
 local Renamer = {}
 
-function Renamer.rename(context: string)
-	local cst = Parser.parse(context)
+function Renamer.rename(content: string)
+	local cst = Parser.parse(content)
 
 	local local_names: { [any]: string } = {}
 
