@@ -8,11 +8,11 @@ hero:
   tagline: A CLI-based Luau transformer built with Lute.
   actions:
     - theme: brand
-      text: Markdown Examples
-      link: /markdown-examples
+      text: Getting Started
+      link: /guide
     - theme: alt
-      text: API Examples
-      link: /api-examples
+      text: References
+      link: /cli
 
 features:
   - title: Resolve

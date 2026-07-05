@@ -12,3 +12,9 @@ rokit install
 pesde install
 lute compile cli/init.luau --output snowluau
 ```
+
+# Install
+```bash
+rokit add nd-interactive/snowluau@version
+rokit install
+```
