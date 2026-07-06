@@ -6,11 +6,12 @@ import { withSidebar } from 'vitepress-sidebar'
 export default withSidebar(
   defineConfig({
     title: "Snowluau",
+    base: "/snowluau/",
     description: "A CLI-based Luau transformer built with Lute.",
     themeConfig: {
       // https://vitepress.dev/reference/default-theme-config
       nav: [
-        { text: 'Home', link: '/' },
+        { text: 'Home', link: '/snowluau' },
       ],
       search: { provider: 'local' },
 
