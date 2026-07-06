@@ -38,7 +38,7 @@ jobs:
       # - uses: oven-sh/setup-bun@v1 # Uncomment this if you're using Bun
       - name: Setup Node
         uses: actions/setup-node@v6
-        
+
       - name: Cache VitePress
         uses: actions/cache@v4
         with:
@@ -59,6 +59,7 @@ jobs:
         with:
           path: docs/.vitepress/dist
 
+          
   # Deployment job
   deploy:
     environment:
