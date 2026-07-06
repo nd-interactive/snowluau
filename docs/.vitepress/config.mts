@@ -11,7 +11,7 @@ export default withSidebar(
     themeConfig: {
       // https://vitepress.dev/reference/default-theme-config
       nav: [
-        { text: 'Home', link: '/snowluau/' },
+        { text: 'Home', link: '/' },
       ],
       search: { provider: 'local' },
 
