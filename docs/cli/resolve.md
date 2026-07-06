@@ -1,3 +1,7 @@
+---
+order: 1
+---
+
 # resolve
 
 Transforms string-based and `.luaurc`-based `require` calls into Roblox-compatible instance-based `require` calls.

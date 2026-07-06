@@ -1,3 +1,7 @@
+---
+order: 3
+---
+
 # rename
 
 Renames all local variables to a sequence of generated variable names.

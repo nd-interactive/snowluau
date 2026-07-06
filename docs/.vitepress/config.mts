@@ -1,27 +1,32 @@
 import { defineConfig } from 'vitepress'
+import { withSidebar } from 'vitepress-sidebar'
 
 // https://vitepress.dev/reference/site-config
-export default defineConfig({
-  title: "Snowluau",
-  description: "A CLI-based Luau transformer built with Lute.",
-  themeConfig: {
-    // https://vitepress.dev/reference/default-theme-config
-    nav: [
-      { text: 'Home', link: '/' },
-    ],
 
-    sidebar: [
-      {
-        text: 'Examples',
-        items: [
-          { text: 'Guide', link: '/guide' },
-          { text: 'CLI References', link: '/cli' }
-        ]
-      }
-    ],
+export default withSidebar(
+  defineConfig({
+    title: "Snowluau",
+    description: "A CLI-based Luau transformer built with Lute.",
+    themeConfig: {
+      // https://vitepress.dev/reference/default-theme-config
+      nav: [
+        { text: 'Home', link: '/' },
+      ],
+      search: { provider: 'local' },
 
-    socialLinks: [
-      { icon: 'github', link: 'https://github.com/nd-interactive/snowluau' }
-    ]
+      socialLinks: [
+        { icon: 'github', link: 'https://github.com/nd-interactive/snowluau' }
+      ]
+    }
+  }),
+  {
+    // ============ [ SIDEBAR OPTIONS ] ============
+    useFolderLinkFromIndexFile: true,
+    useFolderTitleFromIndexFile: true,
+    useTitleFromFileHeading: true,
+    useTitleFromFrontmatter: true,
+    hyphenToSpace: true,
+    sortMenusByFrontmatterOrder: true,
+    excludeByGlobPattern: ['README.md'],
   }
-})
+)

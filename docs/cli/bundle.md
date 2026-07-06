@@ -1,3 +1,7 @@
+---
+order: 2
+---
+
 # bundle
 
 Bundles a multi-file module into a single file by following its require graph.

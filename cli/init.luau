@@ -226,7 +226,7 @@ CLIBuilder.cli
 		:build())
 	:addCommand(CLIBuilder.command
 		.new()
-		:setName("renamer")
+		:setName("rename")
 		:setDescription("renames local variables")
 		:addArgument(
 			CLIBuilder.argument

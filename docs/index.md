@@ -11,13 +11,13 @@ hero:
       text: Getting Started
       link: /guide
     - theme: alt
-      text: References
+      text: Reference
       link: /cli
 
 features:
-  - title: Resolve
+  - title: Resolver
     details: Transforms string-based and `.luaurc`-based `require` calls into Roblox-compatible instance-based `require` calls.
-  - title: Bundle
+  - title: Bundler
     details: Bundles a multi-file module into a single file by following its require graph.
   - title: Renamer
     details: Renames all local variables to a sequence of generated variable names.

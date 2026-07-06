@@ -2,6 +2,5 @@ luau_packages
 snowluau
 
 node_modules
-package-lock.json
 docs/.vitepress/cache
 docs/.vitepress/dist
