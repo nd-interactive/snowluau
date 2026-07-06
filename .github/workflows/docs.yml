@@ -38,9 +38,7 @@ jobs:
       # - uses: oven-sh/setup-bun@v1 # Uncomment this if you're using Bun
       - name: Setup Node
         uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: npm # or pnpm / yarn
+        
       - name: Cache VitePress
         uses: actions/cache@v4
         with:
