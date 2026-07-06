@@ -60,7 +60,7 @@ local function process_paths()
 	return file_paths
 end
 
-local function process(src: string, out: string)
+local function process_resolve(src: string, out: string)
 	local instance_paths = process_paths()
 	local start = os.clock()
 
@@ -176,7 +176,7 @@ CLIBuilder.cli
 			local output = commandArguments.output
 
 			process_clear(input, output)
-			process(input, output)
+			process_resolve(input, output)
 
 			if optionArguments.watch then
 			end
