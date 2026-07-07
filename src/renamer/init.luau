@@ -9,12 +9,11 @@ local Renamer = {}
 function Renamer.rename(content: string)
 	local cst = Parser.parse(content)
 
-	local local_names: { [any]: string } = {}
 
-	local steps = 1
-	Query.findAllFromRoot(cst, Utils.isLocal):forEach(function(cstLocal)
-		local_names[cstLocal] = `v_{string.format("%04d", steps)}`
+	local steps = 0
+	local local_names = Query.findAllFromRoot(cst, Utils.isLocal):replace(function(cstLocal)
 		steps += 1
+		return `v_{string.format("%04d", steps)}`
 	end)
 
 	local replacements = {}
