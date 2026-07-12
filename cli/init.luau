@@ -69,11 +69,11 @@ local function process_resolve(src: string, out: string)
 	})
 
 	local path = walker()
-	while path do
+	while path ~= nil do
 		local path_type = Fs.type(path)
 		local path_ext = Path.extname(path)
 
-		local success, message = xpcall(function(...)
+		local success, message = xpcall(function()
 			if path_type == "dir" then
 				Fs.createDirectory(path, {
 					makeParents = true,
@@ -88,10 +88,12 @@ local function process_resolve(src: string, out: string)
 				if path_ext == ".lua" or path_ext == ".luau" then
 					Fs.writeStringToFile(destination, Resolver.resolve(path, instance_paths))
 				else
-					Fs.copy(src, destination)
+					Fs.copy(path, destination)
 				end
 			end
-		end, debug.traceback)
+
+			error(`Failed to handle kind of module. "{Path.format(path)}"`)
+		end, debug.traceback :: any)
 
 		if not success then
 			print(`failed to resolve "{path}"\n\n{message}`)

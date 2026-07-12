@@ -6,6 +6,7 @@ local Luau = require("@std/luau")
 local Query = require("@std/syntax/query")
 local Parser = require("@std/syntax/parser")
 local Printer = require("@std/syntax/printer")
+local Syntax = require("@std/syntax")
 local Utils = require("@std/syntax/utils")
 
 local Writer = require("@libs/writer")
@@ -16,20 +17,26 @@ local MODULES_NAME = "__SNOWLUAU_MODULES"
 local CACHES_NAME = "__SNOWLUAU_CACHES"
 local CACHE_FUNCTION_NAME = "__SNOWLUAU_CACHE_FUNCTION"
 
-local function read_module(path)
+local function read_module(path: Path.Pathlike): Path.Pathlike
 	local path_type = Fs.type(path)
 
 	if path_type == "dir" then
 		local init_luau = Path.join(path, "init.luau")
 		local init_lua = Path.join(path, "init.lua")
 
-		return Fs.exists(init_luau) and init_luau or Fs.exists(init_lua) and init_lua
+		if Fs.exists(init_luau) then
+			return init_luau
+		elseif Fs.exists(init_lua) then
+			return init_lua
+		end
 	elseif path_type == "file" then
 		return path
 	end
+
+	error(`Failed to find entry of "{Path.format(path)}"`)
 end
 
-function Bundler.bundle(entry: string)
+function Bundler.bundle(entry: Path.Pathlike)
 	local writer = Writer.new()
 
 	writer:append_line("--!nocheck")
@@ -63,10 +70,10 @@ function Bundler.bundle(entry: string)
 	local entry_cwd_relative = read_module(entry)
 
 	local modules = {}
-	local paths = { entry_cwd_relative }
+	local paths = { entry_cwd_relative } :: { Path.Pathlike }
 
 	while next(paths) do
-		local path = Path.format(table.remove(paths))
+		local path = Path.format(assert(table.remove(paths)))
 		local path_context = Fs.readFileToString(path)
 
 		for _, child in Luau.requires(path) do
@@ -87,34 +94,36 @@ function Bundler.bundle(entry: string)
 
 		local parse_result = Parser.parse(path_context)
 
-		local replacements = Query.findAllFromRoot(parse_result, Utils.isRequireCall):replace(function(cstRequireCall)
-			local arguments = cstRequireCall.arguments
+		local replacements = Query.findAllFromRoot(parse_result, Utils.isRequireCall)
+			:replace(function(cstRequireCall: Syntax.CstExprCall)
+				local arguments = cstRequireCall.arguments
 
-			if #arguments > 1 then
-				return
-			end
+				if #arguments > 1 then
+					return nil
+				end
 
-			local expression = arguments[1] :: any
+				local expression = arguments[1] :: any
 
-			if not Utils.isExprConstantString(expression) then
-				return
-			end
+				if not Utils.isExprConstantString(expression) then
+					return nil
+				end
 
-			local value = expression.value
-			local text = value.text
+				local value = expression.value
+				local text = value.text
 
-			if string.sub(text, 1, 4) == "@std" then
-				return
-			end
+				if string.sub(text, 1, 4) == "@std" then
+					return nil
+				end
 
-			local module_absolute_path = Luau.resolveModule(
-				text,
-				string.split(Path.format(Path.basename(path)), ".")[1] == "init" and Path.dirname(path) or path
-			)
-			local module_cwd_relative_path = Path.format(Path.relative(Process.cwd(), module_absolute_path))
+				local module_absolute_path = Luau.resolveModule(
+					text,
+					string.split(Path.format(Path.basename(path) or ""), ".")[1] == "init" and Path.dirname(path)
+						or path
+				)
+				local module_cwd_relative_path = Path.format(Path.relative(Process.cwd(), module_absolute_path))
 
-			return `{CACHE_FUNCTION_NAME}("{module_cwd_relative_path}")`
-		end)
+				return `{CACHE_FUNCTION_NAME}("{module_cwd_relative_path}")`
+			end)
 
 		modules[path] = Printer.printFile(parse_result, replacements)
 	end

@@ -1,10 +1,10 @@
 {
-	"languageMode": "strict",
+    "languageMode": "strict",
     "aliases": {
-        "std": "~/.lute/typedefs/1.0.0/std", 
-        "lute": "~/.lute/typedefs/1.0.0/lute", 
-        "lint": "~/.lute/typedefs/1.0.0/lint",
-
+        "transform": "@std/commands/transform/types",
+        "lint": "@std/commands/lint/types",
+        "std": "~/.lute/typedefs/1.0.1/std",
+        "lute": "~/.lute/typedefs/1.0.1/lute",
 
         "pkg": "./luau_packages",
         "src": "./src",

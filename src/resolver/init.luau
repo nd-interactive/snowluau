@@ -1,6 +1,7 @@
 local Query = require("@std/syntax/query")
 local Parser = require("@std/syntax/parser")
 local Printer = require("@std/syntax/printer")
+local Syntax = require("@std/syntax")
 local Utils = require("@std/syntax/utils")
 local Luau = require("@std/luau")
 local Path = require("@std/path")
@@ -13,36 +14,37 @@ function Resolver.resolve(input, instance_paths: { [string]: string })
 	local source = Fs.readFileToString(input)
 	local parse_result = Parser.parse(source)
 
-	local replacements = Query.findAllFromRoot(parse_result, Utils.isRequireCall):replace(function(cstRequireCall)
-		local arguments = cstRequireCall.arguments
+	local replacements = Query.findAllFromRoot(parse_result, Utils.isRequireCall)
+		:replace(function(cstRequireCall: Syntax.CstExprCall)
+			local arguments = cstRequireCall.arguments
 
-		if #arguments > 1 then
-			return
-		end
-
-		local expression = arguments[1] :: any
-
-		if not Utils.isExprConstantString(expression) then
-			return
-		end
-
-		local value = expression.value
-		local text = value.text
-
-		local success, resolved_path = pcall(Luau.resolveModule, text, input)
-
-		if success then
-			local relative_resolved =
-				assert(string.gsub(Path.format(Path.relative(Process.cwd(), resolved_path)), "\\", "/"))
-			local instance_path = instance_paths[relative_resolved]
-
-			if instance_path then
-				return `require({instance_path})`
+			if #arguments > 1 then
+				return nil
 			end
-		end
 
-		return
-	end)
+			local expression = arguments[1] :: any
+
+			if not Utils.isExprConstantString(expression) then
+				return nil
+			end
+
+			local value = expression.value
+			local text = value.text
+
+			local success, resolved_path = pcall(Luau.resolveModule, text, input)
+
+			if success then
+				local relative_resolved =
+					string.gsub(Path.format(Path.relative(Process.cwd(), resolved_path)), "\\", "/")
+				local instance_path = instance_paths[relative_resolved]
+
+				if instance_path then
+					return `require({instance_path})`
+				end
+			end
+
+			return nil
+		end)
 
 	return Printer.printFile(parse_result, replacements)
 end

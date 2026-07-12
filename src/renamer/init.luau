@@ -2,6 +2,7 @@ local Query = require("@std/syntax/query")
 local Parser = require("@std/syntax/parser")
 local Printer = require("@std/syntax/printer")
 local Utils = require("@std/syntax/utils")
+local Syntax = require("@std/syntax")
 local TableExt = require("@std/tableext")
 
 local Renamer = {}
@@ -9,9 +10,8 @@ local Renamer = {}
 function Renamer.rename(content: string)
 	local cst = Parser.parse(content)
 
-
 	local steps = 0
-	local local_names = Query.findAllFromRoot(cst, Utils.isLocal):replace(function(cstLocal)
+	local local_names = Query.findAllFromRoot(cst, Utils.isLocal):replace(function(cstLocal: Syntax.CstLocal)
 		steps += 1
 		return `v_{string.format("%04d", steps)}`
 	end)
@@ -20,7 +20,7 @@ function Renamer.rename(content: string)
 	TableExt.combine(
 		replacements,
 		local_names,
-		Query.findAllFromRoot(cst, Utils.isExprLocal):replace(function(cstExprLocal)
+		Query.findAllFromRoot(cst, Utils.isExprLocal):replace(function(cstExprLocal: Syntax.CstExprLocal)
 			return local_names[cstExprLocal["local"]]
 		end)
 	)

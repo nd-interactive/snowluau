@@ -1,3 +1,4 @@
 {
-    "luau-lsp.sourcemap.enabled": false
+    "luau-lsp.sourcemap.enabled": false,
+    "luau-lsp.fflags.enableNewSolver": true
 }
