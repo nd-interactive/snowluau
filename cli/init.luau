@@ -90,9 +90,10 @@ local function process_resolve(src: string, out: string)
 				else
 					Fs.copy(path, destination)
 				end
+			else
+				error(`Failed to handle kind of module. got "{path_type}" in "{Path.format(path)}"`)
 			end
 
-			error(`Failed to handle kind of module. "{Path.format(path)}"`)
 		end, debug.traceback :: any)
 
 		if not success then
