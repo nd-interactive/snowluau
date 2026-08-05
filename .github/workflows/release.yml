@@ -47,7 +47,7 @@ jobs:
         uses: CompeyDev/setup-rokit@v0.1.0
 
       - name: Install tools
-        run: rokit install
+        run: rokit install --no-trust-check
 
       - name: Install dependencies
         run: lpm install
