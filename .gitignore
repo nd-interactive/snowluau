@@ -1,6 +1,7 @@
-luau_packages
 snowluau
 
 node_modules
 docs/.vitepress/cache
 docs/.vitepress/dist
+packages/
+.lpm-patch/
