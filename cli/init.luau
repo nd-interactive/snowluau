@@ -4,6 +4,9 @@ local Path = require("@std/path")
 local Fs = require("@std/fs")
 local Process = require("@std/process")
 local TableExt = require("@std/tableext")
+local Printer = require("@std/syntax/printer")
+local Syntax = require("@std/syntax")
+local SyntaxTypes = require("@std/syntax/types")
 
 local Watch = require("@libs/watch")
 local Transformers = require("@src/transformers")
@@ -15,13 +18,53 @@ local VERSION = "0.1.0"
 local function transform(input: Path.Path, output: Path.Path)
 	local manifest: Manifest.Manifest = Manifest.readManifest()
 
-	local replacements = {}
-	for _, process: Manifest.Process in manifest.process do
-		
-		local transformer = Transformers["resolve_roblox_require"]
+	local walker = Fs.walk(input, { recursive = true })
+	local path = walker()
 
-		TableExt.combine(replacements )
+	local start = os.clock()
+
+	while path do
+		local type = Fs.type(path)
+		local ext = Path.extname(path)
+		local output_path = Path.join(output, Path.relative(Process.cwd(), path))
+
+		if type == "dir" then
+			Fs.createDirectory(output_path, { makeParents = true })
+		elseif type == "file" and (ext == ".lua" or ext == ".luau") then
+			local source = Fs.readFileToString(path)
+
+			for _, process: Manifest.Process in manifest.process do
+				local transformer = Transformers[process.name]
+
+				if transformer.initialize then
+					transformer.initialize({
+						options = process.options,
+					})
+				end
+
+				local parseresult = Syntax.parse(source)
+				local replacements = transformer.transform({
+					path = Path.format(path),
+					source = source,
+					parseresult = parseresult,
+					options = process.options,
+				})
+				if typeof(replacements) == "string" then
+					source = replacements
+				else
+					source = Printer.printFile(parseresult, replacements)
+				end
+			end
+
+			Fs.writeStringToFile(output_path, source)
+		else
+			Fs.copy(path, output_path)
+		end
+
+		path = walker()
 	end
+
+	print("processing took " .. tostring(os.clock() - start) .. "s")
 end
 
 CLIBuilder.cli
@@ -69,10 +112,8 @@ CLIBuilder.cli
 			local input = commandArguments.input
 			local output = commandArguments.output
 
-			local cwd = Process.cwd()
-
-			local input_path = Path.relative(cwd, input)
-			local output_path = Path.relative(cwd, output)
+			local input_path = Path.resolve(input)
+			local output_path = Path.resolve(output)
 
 			transform(input_path, output_path)
 			if optionArguments.watch then
