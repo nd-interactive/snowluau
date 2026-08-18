@@ -3,12 +3,12 @@ local Path = require("@std/path")
 local Task = require("@std/task")
 
 type Snapshot = { [string]: Fs.FileMetadata }
-type Change = {
+export type Change = {
 	created: boolean,
 	removed: boolean,
 	changed: boolean,
 }
-type OnChange = (path: Path.Path, change: Change) -> ()
+export type OnChange = (path: Path.Path, change: Change) -> ()
 
 local POLL_INTERVAL = 0.1
 local CREATED: Change = {
