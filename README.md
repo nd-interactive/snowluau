@@ -18,3 +18,12 @@ lute compile cli/init.luau --output snowluau
 rokit add nd-interactive/snowluau@version
 rokit install
 ```
+
+# Example
+`snowluau.toml`
+```toml
+[[process]]
+name = "resolve_roblox_requires",
+```
+
+snowluau process --watch src out
