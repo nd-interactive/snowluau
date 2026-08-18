@@ -1,136 +1,70 @@
-local Fs = require("@std/fs")
-local Json = require("@std/json")
+local CLIBuilder = require("@pkgs/cli_builder")
+
 local Path = require("@std/path")
+local Fs = require("@std/fs")
+local Process = require("@std/process")
+local TableExt = require("@std/tableext")
+local Printer = require("@std/syntax/printer")
+local Syntax = require("@std/syntax")
+local SyntaxTypes = require("@std/syntax/types")
 
-local CLIBuilder = require("@pkg/cli_builder")
-
-local Resolver = require("@src/resolver")
-local Bundler = require("@src/bundler")
-local Renamer = require("@src/renamer")
-
-local SOURCEMAP_PATH = "sourcemap.json"
+local Watch = require("@libs/watch")
+local Transformers = require("@src/transformers")
+local Manifest = require("@src/manifest")
 
 local NAME = "snowluau"
 local VERSION = "0.1.0"
 
-export type Sourcemap = {
-	name: string,
-	className: string,
-	filePaths: { string }?,
-	children: { Sourcemap }?,
-}
+local function transform(input: Path.Path, output: Path.Path)
+	local manifest: Manifest.Manifest = Manifest.readManifest()
 
-local function process_paths()
-	local sourcemap = Json.deserialize(Fs.readFileToString(SOURCEMAP_PATH)) :: Sourcemap
+	local walker = Fs.walk(input, { recursive = true })
+	local path = walker()
 
-	local instance_paths = {}
-
-	local nodes = table.clone(assert(sourcemap.children, "Datamodel includes no children"))
-	local file_paths = {}
-
-	for _, service in nodes do
-		instance_paths[service] = `game:GetService("{service.name}")`
-	end
-
-	while next(nodes) do
-		local node = table.remove(nodes) :: Sourcemap
-
-		local children = node.children
-
-		if children then
-			for _, child in children do
-				local name = child.name
-				local paths = child.filePaths
-
-				local instance_path = `{instance_paths[node]}:WaitForChild("{name}")`
-
-				instance_paths[child] = instance_path
-
-				if paths then
-					for _, path in paths do
-						file_paths[path] = instance_path
-					end
-				end
-
-				table.insert(nodes, child)
-			end
-		end
-	end
-
-	return file_paths
-end
-
-local function process_resolve(src: string, out: string)
-	local instance_paths = process_paths()
 	local start = os.clock()
 
-	local walker = Fs.walk(src, {
-		recursive = true,
-	})
+	while path do
+		local type = Fs.type(path)
+		local ext = Path.extname(path)
+		local output_path = Path.join(output, Path.relative(Process.cwd(), path))
 
-	local path = walker()
-	while path ~= nil do
-		local path_type = Fs.type(path)
-		local path_ext = Path.extname(path)
+		if type == "dir" then
+			Fs.createDirectory(output_path, { makeParents = true })
+		elseif type == "file" and (ext == ".lua" or ext == ".luau") then
+			local source = Fs.readFileToString(path)
 
-		local success, message = xpcall(function()
-			if path_type == "dir" then
-				Fs.createDirectory(path, {
-					makeParents = true,
-				})
-			elseif path_type == "file" then
-				local destination = Path.join(out, Path.relative(src, path))
+			for _, process: Manifest.Process in manifest.process do
+				local transformer = Transformers[process.name]
 
-				Fs.createDirectory(Path.dirname(destination), {
-					makeParents = true,
-				})
-
-				if path_ext == ".lua" or path_ext == ".luau" then
-					Fs.writeStringToFile(destination, Resolver.resolve(path, instance_paths))
-				else
-					Fs.copy(path, destination)
+				if transformer.initialize then
+					transformer.initialize({
+						options = process.options,
+					})
 				end
-			else
-				error(`Failed to handle kind of module. got "{path_type}" in "{Path.format(path)}"`)
+
+				local parseresult = Syntax.parse(source)
+				local replacements = transformer.transform({
+					path = Path.format(path),
+					source = source,
+					parseresult = parseresult,
+					options = process.options,
+				})
+				if typeof(replacements) == "string" then
+					source = replacements
+				else
+					source = Printer.printFile(parseresult, replacements)
+				end
 			end
 
-		end, debug.traceback :: any)
-
-		if not success then
-			print(`failed to resolve "{path}"\n\n{message}`)
+			Fs.writeStringToFile(output_path, source)
+		else
+			Fs.copy(path, output_path)
 		end
 
 		path = walker()
 	end
 
 	print("processing took " .. tostring(os.clock() - start) .. "s")
-end
-
-local function process_clear(src: string, out: string)
-	if not Fs.exists(out) then
-		return
-	end
-
-	local walker = Fs.walk(out, {
-		recursive = true,
-	})
-
-	local path = walker()
-	while path do
-		if Fs.exists(path) and not Fs.exists(Path.join(src, Path.relative(out, path))) then
-			local path_type = Fs.type(path)
-
-			if path_type == "dir" then
-				Fs.removeDirectory(path, {
-					recursive = true,
-				})
-			elseif path_type == "file" then
-				Fs.remove(path)
-			end
-		end
-
-		path = walker()
-	end
 end
 
 CLIBuilder.cli
@@ -141,8 +75,8 @@ CLIBuilder.cli
 	:setGitRepository("https://github.com/nd-interactive/snowluau")
 	:addCommand(CLIBuilder.command
 		.new()
-		:setName("resolve")
-		:setDescription("Transfrom string-based require to roblox instance-based require")
+		:setName("process")
+		:setDescription("Process transforms.")
 		:addOption(
 			CLIBuilder.option
 				.new()
@@ -178,85 +112,15 @@ CLIBuilder.cli
 			local input = commandArguments.input
 			local output = commandArguments.output
 
-			process_clear(input, output)
-			process_resolve(input, output)
+			local input_path = Path.resolve(input)
+			local output_path = Path.resolve(output)
 
+			transform(input_path, output_path)
 			if optionArguments.watch then
+				Watch.watch(input_path, function(_, _)
+					transform(input_path, output_path)
+				end)
 			end
-		end)
-		:build())
-	:addCommand(CLIBuilder.command
-		.new()
-		:setName("bundle")
-		:setDescription("bundle a bunch of scripts into single script")
-		:addOption(
-			CLIBuilder.option
-				.new()
-				:setName("watch")
-				:addAlias("w")
-				:setDescription("Watch changes")
-				:setType("boolean")
-				:setDefaultValue(false)
-				:build()
-		)
-		:addArgument(
-			CLIBuilder.argument
-				.new()
-				:setName("input")
-				:setDescription("Path to input")
-				:setType("string")
-				:setRequired(true)
-				:build()
-		)
-		:addArgument(
-			CLIBuilder.argument
-				.new()
-				:setName("output")
-				:setDescription("Path to output")
-				:setType("string")
-				:setRequired(true)
-				:build()
-		)
-		:setCallback(function(options)
-			local commandArguments = options.commandArguments
-			--local optionArguments = options.commandOptions
-
-			local input = commandArguments.input
-			local output = commandArguments.output
-
-			Fs.writeStringToFile(output, Bundler.bundle(input))
-		end)
-		:build())
-	:addCommand(CLIBuilder.command
-		.new()
-		:setName("rename")
-		:setDescription("renames local variables")
-		:addArgument(
-			CLIBuilder.argument
-				.new()
-				:setName("input")
-				:setDescription("Path to input")
-				:setType("string")
-				:setRequired(true)
-				:build()
-		)
-		:addArgument(
-			CLIBuilder.argument
-				.new()
-				:setName("output")
-				:setDescription("Path to output")
-				:setType("string")
-				:setRequired(true)
-				:build()
-		)
-		:setCallback(function(options)
-			local commandArguments = options.commandArguments
-			--local optionArguments = options.commandOptions
-
-			local input = commandArguments.input
-			local output = commandArguments.output
-
-			Fs.writeStringToFile(output, Renamer.rename(Fs.readFileToString(input)))
 		end)
 		:build())
 	:run({ select(2, ...) })

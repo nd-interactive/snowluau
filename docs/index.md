@@ -15,11 +15,11 @@ hero:
       link: /cli
 
 features:
-  - title: Resolver
+  - title: Resolve Roblox Require
     details: Transforms string-based and `.luaurc`-based `require` calls into Roblox-compatible instance-based `require` calls.
-  - title: Bundler
-    details: Bundles a multi-file module into a single file by following its require graph.
-  - title: Renamer
+  - title: Rename Variables
     details: Renames all local variables to a sequence of generated variable names.
+  - title: Cool
+    details: It is pretty cool.
 ---
 

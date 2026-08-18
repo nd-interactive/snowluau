@@ -16,9 +16,7 @@ snowluau <command> [options] [arguments...]
 
 | Command | Description |
 | ------- | ----------- |
-| [resolve](./resolve) | Transforms string-based and `.luaurc`-based `require` calls into Roblox-compatible instance-based `require` calls. |
-| [bundle](./bundle) | Bundles a multi-file module into a single file by following its require graph. |
-| [rename](./rename) | Renames all local variables to a sequence of generated variable names. |
+| [process](./process) | Generates output with the transformer rules defined in snowluau.toml applied. |
 
 ## Global Options
 
