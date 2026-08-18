@@ -26,7 +26,7 @@ local function transform(input: Path.Path, output: Path.Path)
 	while path do
 		local type = Fs.type(path)
 		local ext = Path.extname(path)
-		local output_path = Path.join(output, Path.relative(Process.cwd(), path))
+		local output_path = Path.join(output, Path.relative(input, path))
 
 		if type == "dir" then
 			Fs.createDirectory(output_path, { makeParents = true })
@@ -115,10 +115,33 @@ CLIBuilder.cli
 			local input_path = Path.resolve(input)
 			local output_path = Path.resolve(output)
 
+			if Fs.exists(output_path) then
+				if Fs.type(output_path) == "dir" then
+					Fs.removeDirectory(output_path, {
+						recursive = true,
+					})
+				else
+					Fs.remove(output_path)
+				end
+			end
+
 			transform(input_path, output_path)
 			if optionArguments.watch then
-				Watch.watch(input_path, function(_, _)
-					transform(input_path, output_path)
+				Watch.watch(input_path, function(path: Path.Path, change: Watch.Change)
+					if change.changed or change.created then
+						transform(input_path, output_path)
+					elseif change.removed then
+						local path_to_remove = Path.join(output_path, Path.relative(input_path, path))
+						if Fs.exists(path_to_remove) then
+							if Fs.type(path_to_remove) == "dir" then
+								Fs.removeDirectory(path_to_remove, {
+									recursive = true,
+								})
+							else
+								Fs.remove(path_to_remove)
+							end
+						end
+					end
 				end)
 			end
 		end)
