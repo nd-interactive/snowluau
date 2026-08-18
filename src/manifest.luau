@@ -6,9 +6,12 @@ local Manifest = {}
 
 local MANIFEST_NAME = "snowluau.toml"
 
-export type Process = string
-export type Manifest = {
-    processes: { Process }
+export type Process = {
+	name: keyof<typeof(require("./transformers"))>,
+	options: { [string]: string | boolean },
+}
+export type Manifest = { -- TODO: options를 포함해야 할것 같음.
+	process: { Process },
 }
 
 function Manifest.readManifest(): Manifest

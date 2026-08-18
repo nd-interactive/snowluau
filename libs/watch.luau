@@ -29,31 +29,21 @@ local CHANGED: Change = {
 
 local Watch = {}
 
-local function scanDirectory(directory: Path.Path, snapshot: Snapshot)
-	local succeeded, entries = pcall(Fs.listDirectory, directory)
-	if not succeeded then
-		return
-	end
-
-	for _, entry in entries do
-		local entryPath = Path.join(directory, entry.name)
-		local metadataSucceeded, metadata = pcall(Fs.metadata, entryPath)
-
-		if metadataSucceeded then
-			local entryName = Path.format(entryPath)
-			snapshot[entryName] = metadata
-
-			if metadata.type == "dir" then
-				scanDirectory(entryPath, snapshot)
-			end
-		end
-	end
-end
-
 local function createSnapshot(directory: Path.Path): Snapshot
 	local snapshot: Snapshot = {}
+	local walker = Fs.walk(directory, { recursive = true })
 
-	scanDirectory(directory, snapshot)
+	local path = walker() -- root 제외
+
+	while path do
+		local succeeded, metadata = pcall(Fs.metadata, path)
+		if succeeded then
+			snapshot[Path.format(path)] = metadata
+		end
+
+		path = walker()
+	end
+
 	return snapshot
 end
 

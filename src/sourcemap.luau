@@ -12,14 +12,17 @@ export type Sourcemap = {
 	filePaths: { string }?,
 	children: { Sourcemap }?,
 }
+export type AliasesMap = {
+	[string]: string
+}
 
 function Sourcemap.readSourcemap(): Sourcemap
 	return Json.deserialize(Fs.readFileToString(Path.parse(SOURCEMAP_NAME))) :: Sourcemap
 end
 
-function Sourcemap.getFilePathMap(sourcemap: Sourcemap)
+function Sourcemap.parseAliasesMap(sourcemap: Sourcemap): AliasesMap
 	local node_paths = {} :: { [Sourcemap]: string }
-	local instance_paths_mapped = {} :: { [string]: string }
+	local aliases_map = {} :: AliasesMap
 
 	local nodes = assert(table.clone(sourcemap.children))
 
@@ -39,12 +42,12 @@ function Sourcemap.getFilePathMap(sourcemap: Sourcemap)
 			local name = child.name
 			local paths = child.filePaths
 
-			local instance_path = `{node_paths[current]}/{name}`
-			node_paths[child] = instance_path
+			local alias_path = `{node_paths[current]}/{name}`
+			node_paths[child] = alias_path
 
 			if paths then
 				for _, path in paths do
-					instance_paths_mapped[path] = instance_path
+					aliases_map[path] = alias_path
 				end
 			end
 
@@ -52,7 +55,7 @@ function Sourcemap.getFilePathMap(sourcemap: Sourcemap)
 		end
 	end
 
-	return instance_paths_mapped
+	return aliases_map
 end
 
 return Sourcemap

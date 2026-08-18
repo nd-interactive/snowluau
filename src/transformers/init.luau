@@ -1,5 +1,5 @@
-local Transform = require("@transform")
-
 local transformers = {
+    ["resolve_roblox_require"] = require("@self/resolve_roblox_require")
+}
 
-} :: { [string]: Transform.Migration }
+return transformers
