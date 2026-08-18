@@ -17,6 +17,12 @@ snowluau process [options] <src> <out>
 ### `-w, --watch`
 
 ## Examples
+`snowluau.toml` must defined before process.
+```toml
+[[process]]
+name = "resolve_roblox_requires",
+options = { fiz = "bar" }
+```
 
 Outputs transformed mirror into `<out>`.
 ```bash
