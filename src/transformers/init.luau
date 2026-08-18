@@ -1,5 +1,5 @@
 local transformers = {
-    ["resolve_roblox_require"] = require("@self/resolve_roblox_require"),
+    ["resolve_roblox_requires"] = require("@self/resolve_roblox_requires"),
     ["rename_variables"] = require("@self/rename_variables")
 }
 
