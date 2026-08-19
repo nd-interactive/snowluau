@@ -2,11 +2,9 @@ local CLIBuilder = require("@pkgs/cli_builder")
 
 local Path = require("@std/path")
 local Fs = require("@std/fs")
-local Process = require("@std/process")
-local TableExt = require("@std/tableext")
 local Printer = require("@std/syntax/printer")
 local Syntax = require("@std/syntax")
-local SyntaxTypes = require("@std/syntax/types")
+local Transform = require("@transform")
 
 local Watch = require("@libs/watch")
 local Transformers = require("@src/transformers")
@@ -34,25 +32,44 @@ local function transform(input: Path.Path, output: Path.Path)
 			local source = Fs.readFileToString(path)
 
 			for _, process: Manifest.Process in manifest.process do
-				local transformer = Transformers[process.name]
+				-- TODO: really idk how to resolve this type error.
+				local transformer = Transformers[process.name] :: Transform.Migration
+				local options: { [unknown]: unknown } = {}
 
-				if transformer.initialize then
-					transformer.initialize({
-						options = process.options,
-					})
+				if transformer.options then
+					for _, config_option in transformer.options do
+						options[config_option.name] = process.options and process.options[config_option.name]
+							or config_option.default
+					end
 				end
 
-				local parseresult = Syntax.parse(source)
-				local replacements = transformer.transform({
-					path = Path.format(path),
-					source = source,
-					parseresult = parseresult,
-					options = process.options,
-				})
-				if typeof(replacements) == "string" then
-					source = replacements
-				else
-					source = Printer.printFile(parseresult, replacements)
+				-- TODO: xpcall is confusing type solves.
+				local success, message = xpcall(
+					function()
+						if transformer.initialize then
+							transformer.initialize({
+								options = options,
+							})
+						end
+
+						local parseresult = Syntax.parse(source)
+						local replacements = transformer.transform({
+							path = Path.format(path :: any), -- this too. inline(?) function confusing this. idk.
+							source = source,
+							parseresult = parseresult,
+							options = options,
+						})
+						if typeof(replacements) == "string" then
+							source = replacements
+						else
+							source = Printer.printFile(parseresult, replacements)
+						end
+					end :: any,
+					debug.traceback :: any
+				)
+
+				if not success then
+					print(`Failed to transform "{Path.format(path)}" to "{process.name}":\n\n{message}`)
 				end
 			end
 
