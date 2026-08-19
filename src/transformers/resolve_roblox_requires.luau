@@ -36,9 +36,9 @@ local transformer: Transform.Migration = {
 				local success, resolved_path = pcall(Luau.resolveModule, text, context.path)
 
 				if success then
-					local relative_resolved =
-						string.gsub(Path.format(Path.relative(Process.cwd(), resolved_path)), "\\", "/")
-					local alias_path = aliases_map[relative_resolved]
+					local cwd_relative_path = Path.relative(Process.cwd(), resolved_path)
+					local formatted_path = string.gsub(Path.format(cwd_relative_path), "\\", "/")
+					local alias_path = aliases_map[formatted_path]
 
 					if alias_path then
 						return `require("{alias_path}")`
