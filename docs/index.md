@@ -4,8 +4,8 @@ layout: home
 
 hero:
   name: "Snowluau"
-  text: "Luau transformer"
-  tagline: A CLI-based Luau transformer built with Lute.
+  text: "Transformer for luau"
+  tagline: A CLI-based transformer for luau built with Lute.
   actions:
     - theme: brand
       text: Getting Started
