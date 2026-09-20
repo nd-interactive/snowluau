@@ -6,9 +6,11 @@ local Printer = require("@std/syntax/printer")
 local Syntax = require("@std/syntax")
 local Transform = require("@transform")
 
-local Watch = require("@libs/watch")
 local Transformers = require("@src/transformers")
+local Bundler = require("@src/bundler")
 local Manifest = require("@src/manifest")
+
+local Watch = require("@libs/watch")
 
 local NAME = "snowluau"
 local VERSION = "0.1.0"
@@ -32,8 +34,8 @@ local function transform(input: Path.Path, output: Path.Path)
 			local source = Fs.readFileToString(path)
 
 			for _, process: Manifest.Process in manifest.process do
-				-- TODO: really idk how to resolve this type error.
-				local transformer = Transformers[process.name] :: Transform.Migration
+				-- LUAU FIXEME: really idk how to resolve this type error.
+				local transformer = (Transformers :: any)[process.name] :: Transform.Migration
 				local options: { [unknown]: unknown } = {}
 
 				if transformer.options then
@@ -122,9 +124,9 @@ CLIBuilder.cli
 				:setRequired(true)
 				:build()
 		)
-		:setCallback(function(options)
-			local commandArguments = options.commandArguments
-			local optionArguments = options.commandOptions
+		:setCallback(function(context)
+			local commandArguments = context.commandArguments
+			local optionArguments = context.commandOptions
 
 			local input = commandArguments.input
 			local output = commandArguments.output
@@ -161,6 +163,41 @@ CLIBuilder.cli
 					end
 				end)
 			end
+		end)
+		:build())
+	:addCommand(CLIBuilder.command
+		.new()
+		:setName("bundle")
+		:setDescription("Bundle script into single file from root.")
+		:addArgument(
+			CLIBuilder.argument
+				.new()
+				:setName("input")
+				:setDescription("Path to input")
+				:setType("string")
+				:setRequired(true)
+				:build()
+		)
+		:addArgument(
+			CLIBuilder.argument
+				.new()
+				:setName("output")
+				:setDescription("Path to output")
+				:setType("string")
+				:setRequired(true)
+				:build()
+		)
+		:setCallback(function(context)
+			local commandArguments = context.commandArguments
+			--local optionArguments = context.commandOptions
+
+			local input = commandArguments.input
+			local output = commandArguments.output
+
+			local input_path = Path.resolve(input)
+			local output_path = Path.resolve(output)
+
+			Fs.writeStringToFile(output_path, Bundler.bundle(input_path))
 		end)
 		:build())
 	:run({ select(2, ...) })

@@ -77,18 +77,15 @@ local transformer: Transform.Migration = {
 		local index_style = options["index_style"]
 
 		local replacements = Query.findAllFromRoot(context.parseresult, Utils.isRequireCall)
-			:replace(function(cstRequireCall: Syntax.CstExprCall)
+			:filter(function(cstRequireCall: Syntax.CstExprCall)
 				local arguments = cstRequireCall.arguments
-
-				if #arguments > 1 then
-					return nil
-				end
-
 				local expression = arguments[1] :: any
 
-				if not Utils.isExprConstantString(expression) then
-					return nil
-				end
+				return (#arguments >= 1) and Utils.isExprConstantString(expression) :: any
+			end)
+			:replace(function(cstRequireCall: Syntax.CstExprCall)
+				local arguments = cstRequireCall.arguments
+				local expression = arguments[1] :: any
 
 				local value = expression.value
 				local text = value.text
