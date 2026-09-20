@@ -11,7 +11,7 @@ local Printer = require("@std/syntax/printer")
 local Process = require("@std/process")
 
 local Writer = require("@libs/writer")
-local cst = require("@lute/syntax/cst")
+local RemoveTypes = require("@src/transformers/remove_types")
 
 local Bundler = {}
 
@@ -50,38 +50,12 @@ local function comparePath(a: Path.Path, b: Path.Path)
 end
 
 local function removeTypes(source)
-	local cst = Parser.parse(source)
-	local replacements = {}
-
-	Query.findAllFromRoot(cst, function(cstNode)
-		return cstNode
-	end):forEach(function(cstNode: any)
-		if Utils.isType(cstNode) or Utils.isStatTypeAlias(cstNode) then
-			replacements[cstNode] = ""
-		elseif Utils.isExprTypeAssertion(cstNode) then
-			replacements[cstNode] = Printer.printNode(cstNode.operand)
-		elseif Utils.isLocal(cstNode) then
-			local colon = cstNode.colon
-
-			if colon then
-				replacements[colon] = ""
-			end
-		elseif Utils.isExprFunction(cstNode) then
-			if cstNode.returnSpecifier then
-				replacements[cstNode.returnSpecifier] = ""
-			end
-
-			if cstNode.varargColon then
-				replacements[cstNode.varargColon] = ""
-			end
-
-			if cstNode.returnAnnotation then
-				replacements[cstNode.returnAnnotation] = ""
-			end
-		end
-	end)
-
-	return Printer.printFile(cst, replacements)
+	return RemoveTypes.transform({
+		path = nil :: any,
+		parseresult = Parser.parse(source),
+		source = source,
+		options = {},
+	}) :: string
 end
 
 function Bundler.bundle(root: Path.Path): string
