@@ -30,9 +30,9 @@ local %s = {}
 
 local REQUIRE_FUNCTION_SNIPPET = string.format(
 	[[
-local function %s(requirepath: string): any
+local function %s(requirepath: string, ...): any
     if not %s[requirepath] then
-        %s[requirepath] = %s[requirepath]()
+        %s[requirepath] = %s[requirepath](...)
     end
 
     return %s[requirepath]
@@ -91,6 +91,7 @@ function Bundler.bundle(root: Path.Path): string
 	local cwd = Process.cwd()
 	local writer = Writer.new()
 
+	writer:append_line("--!nocheck")
 	writer:append_line(TABLE_DEFINITION_SNIIPET)
 	writer:append_line(REQUIRE_FUNCTION_SNIPPET)
 
@@ -143,7 +144,7 @@ function Bundler.bundle(root: Path.Path): string
 		local replaced = Printer.printFile(context, replacements)
 		local module_name = Path.format(Path.relative(cwd, path))
 
-		writer:append_line(`{MODULES}["{module_name}"] = function()`)
+		writer:append_line(`{MODULES}["{module_name}"] = function(...)`)
 		writer:indent()
 
 		writer:append_lines(string.split(replaced, "\n"))
@@ -152,7 +153,7 @@ function Bundler.bundle(root: Path.Path): string
 		writer:append_line("end")
 	end
 
-	writer:append_line(`return {REQUIRE_FUNCTION}("{Path.format(Path.relative(cwd, root))}")`)
+	writer:append_line(`return {REQUIRE_FUNCTION}("{Path.format(Path.relative(cwd, root))}", ...)`)
 
 	return writer:finalize()
 end
