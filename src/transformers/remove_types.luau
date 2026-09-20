@@ -29,9 +29,34 @@ local transformer: Transform.Migration = {
 					replacements[cstNode.varargColon] = ""
 				end
 
+				if cstNode.varargAnnotation then
+					replacements[cstNode.varargAnnotation] = ""
+				end
+
 				if cstNode.returnAnnotation then
 					replacements[cstNode.returnAnnotation] = ""
 				end
+
+				--[[
+				TODO: must remove generic fully.
+				if cstNode.generics then
+					replacements[cstNode.generics] = ""
+				end
+
+				if cstNode.genericPacks then
+					replacements[cstNode.genericPacks] = ""
+				end
+
+				if cstNode.openGenerics then
+					replacements[cstNode.openGenerics] = ""
+				end
+
+				if cstNode.closeGenerics then
+					replacements[cstNode.closeGenerics] = ""
+				end
+				]]
+			elseif Utils.isExprInstantiate(cstNode) then
+				replacements[cstNode] = Printer.printNode(cstNode.expr)
 			end
 		end)
 

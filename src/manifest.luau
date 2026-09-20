@@ -10,7 +10,7 @@ export type Process = {
 	name: keyof<typeof(require("./transformers"))>,
 	options: { [string]: string | boolean },
 }
-export type Manifest = { -- TODO: options를 포함해야 할것 같음.
+export type Manifest = {
 	process: { Process },
 }
 
