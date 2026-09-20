@@ -30,7 +30,7 @@ local %s = {}
 
 local REQUIRE_FUNCTION_SNIPPET = string.format(
 	[[
-local function %s(requirepath: string)
+local function %s(requirepath: string): any
     if not %s[requirepath] then
         %s[requirepath] = %s[requirepath]()
     end
@@ -49,7 +49,8 @@ local function comparePath(a: Path.Path, b: Path.Path)
 	return Path.format(Path.normalize(a)) == Path.format(Path.normalize(b))
 end
 
-local function typeRemovedReplacements(cst: Syntax.CstParseResult)
+local function removeTypes(source)
+	local cst = Parser.parse(source)
 	local replacements = {}
 
 	Query.findAllFromRoot(cst, function(cstNode)
@@ -80,7 +81,7 @@ local function typeRemovedReplacements(cst: Syntax.CstParseResult)
 		end
 	end)
 
-	return replacements
+	return Printer.printFile(cst, replacements)
 end
 
 function Bundler.bundle(root: Path.Path): string
@@ -114,33 +115,30 @@ function Bundler.bundle(root: Path.Path): string
 
 	for _, path in visited do
 		local source = Fs.readFileToString(path)
-		local context = Parser.parse(source)
+		local context = Parser.parse(removeTypes(source))
 
-		local replacements = TableExt.combine(
-			Query.findAllFromRoot(context, Utils.isRequireCall)
-				:filter(function(cstRequireCall: Syntax.CstExprCall)
-					local arguments = cstRequireCall.arguments
-					local expression = arguments[1] :: any
+		local replacements = Query.findAllFromRoot(context, Utils.isRequireCall)
+			:filter(function(cstRequireCall: Syntax.CstExprCall)
+				local arguments = cstRequireCall.arguments
+				local expression = arguments[1] :: any
 
-					return (#arguments >= 1) and Utils.isExprConstantString(expression) :: any
-				end)
-				:replace(function(cstRequireCall: Syntax.CstExprCall)
-					local arguments = cstRequireCall.arguments
-					local expression = arguments[1] :: any
+				return (#arguments >= 1) and Utils.isExprConstantString(expression) :: any
+			end)
+			:replace(function(cstRequireCall: Syntax.CstExprCall)
+				local arguments = cstRequireCall.arguments
+				local expression = arguments[1] :: any
 
-					local value = expression.value
-					local text = value.text
+				local value = expression.value
+				local text = value.text
 
-					local success, resolved_path = pcall(Luau.resolveModule, text, path)
+				local success, resolved_path = pcall(Luau.resolveModule, text, path)
 
-					if not success then
-						return nil
-					end
+				if not success then
+					return nil
+				end
 
-					return `{REQUIRE_FUNCTION}("{Path.format(Path.relative(cwd, resolved_path))}")`
-				end),
-			typeRemovedReplacements(context)
-		)
+				return `{REQUIRE_FUNCTION}("{Path.format(Path.relative(cwd, resolved_path))}")`
+			end)
 
 		local replaced = Printer.printFile(context, replacements)
 		local module_name = Path.format(Path.relative(cwd, path))
@@ -153,6 +151,8 @@ function Bundler.bundle(root: Path.Path): string
 		writer:dedent()
 		writer:append_line("end")
 	end
+
+	writer:append_line(`return {REQUIRE_FUNCTION}("{Path.format(Path.relative(cwd, root))}")`)
 
 	return writer:finalize()
 end
