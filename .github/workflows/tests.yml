@@ -1,0 +1,24 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  remove-types:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: CompeyDev/setup-rokit@v0.1.0
+      - name: Install tools
+        run: rokit install --no-trust-check
+      - name: Generate Lute type definitions
+        run: lute setup
+      - name: Check transformer and tests
+        run: lute check src/transformers/remove_types.luau tests/remove_types.luau
+      - name: Test remove_types
+        run: lute run tests/remove_types.luau

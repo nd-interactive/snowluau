@@ -1,66 +1,137 @@
 local Transform = require("@transform")
+local Syntax = require("@std/syntax")
 local Query = require("@std/syntax/query")
 local Utils = require("@std/syntax/utils")
-local Printer = require("@std/syntax/printer")
+
+type Edit = {
+	first: number,
+	last: number,
+	text: string,
+}
+
+local function isTypeDeclaration(node: Syntax.CstNode): boolean
+	return Utils.isStatTypeAlias(node) ~= nil or Utils.isStatTypeFunction(node) ~= nil
+end
 
 local transformer: Transform.Migration = {
 	transform = function(context: Transform.Context<{ [any]: any }>)
-		local replacements = {}
+		local source = context.source
+		local lineOffsets = { 1 }
+		for position in string.gmatch(source, "()\n") do
+			table.insert(lineOffsets, position + 1)
+		end
 
-		Query.findAllFromRoot(context.parseresult, function(cstNode)
-			return cstNode
-		end):forEach(function(cstNode: any)
-			if Utils.isType(cstNode) or Utils.isStatTypeAlias(cstNode) then
-				replacements[cstNode] = ""
-			elseif Utils.isExprTypeAssertion(cstNode) then
-				replacements[cstNode] = Printer.printNode(cstNode.operand)
-			elseif Utils.isLocal(cstNode) then
-				local colon = cstNode.colon
+		-- CST coordinates are one-based byte positions; the end is exclusive.
+		local function beginOffset(span: Syntax.Span): number
+			return lineOffsets[span.beginLine] + span.beginColumn - 1
+		end
+		local function endOffset(span: Syntax.Span): number
+			return lineOffsets[span.endLine] + span.endColumn - 1
+		end
 
-				if colon then
-					replacements[colon] = ""
-				end
-			elseif Utils.isExprFunction(cstNode) then
-				if cstNode.returnSpecifier then
-					replacements[cstNode.returnSpecifier] = ""
-				end
+		local edits: { Edit } = {}
+		local function insert(position: number, text: string)
+			table.insert(edits, { first = position, last = position, text = text })
+		end
+		local function erase(first: Syntax.Span, last: Syntax.Span?, text: string?)
+			local start = beginOffset(first)
+			local finish = endOffset(last or first)
+			-- Keep line endings and a token boundary, including for `1::number.."x"`.
+			local newlines = string.gsub(string.sub(source, start, finish - 1), "[^\r\n]", "")
+			table.insert(edits, { first = start, last = finish, text = (text or "") .. " " .. newlines })
+		end
 
-				if cstNode.varargColon then
-					replacements[cstNode.varargColon] = ""
+		local nodes = Query.findAllFromRoot(context.parseresult, function(node)
+			return node
+		end).nodes
+		for _, node in nodes do
+			local binding = Utils.isLocal(node)
+			local func = Utils.isExprFunction(node)
+			local assertion = Utils.isExprTypeAssertion(node)
+			local instantiation = Utils.isExprInstantiate(node)
+			if isTypeDeclaration(node) then
+				erase(node.location)
+			elseif binding then
+				if binding.colon and binding.annotation then
+					erase(binding.colon.location, binding.annotation.location)
 				end
-
-				if cstNode.varargAnnotation then
-					replacements[cstNode.varargAnnotation] = ""
+			elseif func then
+				if func.openGenerics and func.closeGenerics then
+					erase(func.openGenerics.location, func.closeGenerics.location)
 				end
-
-				if cstNode.returnAnnotation then
-					replacements[cstNode.returnAnnotation] = ""
+				if func.varargColon and func.varargAnnotation then
+					erase(func.varargColon.location, func.varargAnnotation.location)
 				end
-
-				--[[
-				TODO: must remove generic fully.
-				if cstNode.generics then
-					replacements[cstNode.generics] = ""
+				if func.returnSpecifier and func.returnAnnotation then
+					erase(func.returnSpecifier.location, func.returnAnnotation.location)
 				end
-
-				if cstNode.genericPacks then
-					replacements[cstNode.genericPacks] = ""
+			elseif assertion then
+				-- Assertions produce one value, even when the operand is a call or `...`.
+				local operand = assertion.operand
+				local instantiated = Utils.isExprInstantiate(operand)
+				while instantiated do
+					operand = instantiated.expr
+					instantiated = Utils.isExprInstantiate(operand)
 				end
-
-				if cstNode.openGenerics then
-					replacements[cstNode.openGenerics] = ""
+				local needsParens = Utils.isExprCall(operand) ~= nil or Utils.isExprVarargs(operand) ~= nil
+				if needsParens then
+					insert(beginOffset(assertion.operand.location), "(")
 				end
-
-				if cstNode.closeGenerics then
-					replacements[cstNode.closeGenerics] = ""
-				end
-				]]
-			elseif Utils.isExprInstantiate(cstNode) then
-				replacements[cstNode] = Printer.printNode(cstNode.expr)
+				erase(assertion.operator.location, assertion.annotation.location, if needsParens then ")" else nil)
+			elseif instantiation then
+				erase(instantiation.leftArrow1.location, instantiation.rightArrow2.location)
 			end
+		end
+
+		if #edits == 0 then
+			return source
+		end
+
+		-- Removing a declaration or assertion can turn the next `(f)()` statement
+		-- into a call on the preceding expression. Preserve the parsed boundary.
+		for _, node in nodes do
+			local block = Utils.isStatBlock(node)
+			if block then
+				local previous: Syntax.CstStat? = nil
+				for _, statement in block.statements do
+					if isTypeDeclaration(statement) then
+						continue
+					end
+					local start = beginOffset(statement.location)
+					if previous and string.sub(source, start, start) == "(" then
+						local finish = endOffset(previous.location)
+						if string.sub(source, finish - 1, finish - 1) ~= ";" then
+							insert(finish, ";")
+						end
+					end
+					previous = statement
+				end
+			end
+		end
+
+		table.sort(edits, function(a: Edit, b: Edit)
+			if a.first ~= b.first then
+				return a.first < b.first
+			end
+			-- Apply insertions before an erasure beginning at the same position.
+			if a.last == a.first or b.last == b.first then
+				return a.last < b.last
+			end
+			return a.last > b.last
 		end)
 
-		return Printer.printFile(context.parseresult, replacements)
+		local output = {}
+		local cursor = 1
+		for _, edit in edits do
+			-- An enclosing annotation or declaration also erases all edits inside it.
+			if edit.first >= cursor then
+				table.insert(output, string.sub(source, cursor, edit.first - 1))
+				table.insert(output, edit.text)
+				cursor = edit.last
+			end
+		end
+		table.insert(output, string.sub(source, cursor))
+		return table.concat(output)
 	end,
 }
 
